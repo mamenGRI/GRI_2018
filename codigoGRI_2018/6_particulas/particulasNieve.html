@@ -1,0 +1,209 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+		<meta charset=utf-8> 
+		<title> Nieve </title> 
+		<style> 
+			body { 
+				margin: 0;
+            	overflow: hidden;
+            	background-color: #000000; 
+            } 
+		</style> 
+	</head> 
+
+	<body> 
+		<script src="../libs/three.min.js"></script>
+		<script src="../libs/dat.gui.js"></script>
+
+		<script>
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			var controles;
+
+			var maximoParticulas = 50;
+
+			var sistema;
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+				// Creamos la escena que contiene todos los objetos, camaras y luces
+				scene = new THREE.Scene();
+
+				// Creamos el objeto render que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+        		renderer.setClearColor(0x000000);
+        		renderer.setSize(window.innerWidth, window.innerHeight);
+        		renderer.shadowMap.enabled = true;
+				renderer.shadowMap.type = THREE.PCFSoftShadowMap; // por defecto THREE.PCFShadowMap
+
+				// Creamos la camara
+				camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+				// Posicionamos la camara en el centro de la escena
+		        camera.position.x = 20;
+		        camera.position.y = 40;
+		        camera.position.z = 110;
+		        camera.lookAt(new THREE.Vector3(20, 30, 0));
+
+		        // Controles
+		        controles = new function () {
+		            this.size = 10;
+		            this.transparent = true;
+		            this.opacity = 0.6;
+		            this.color = 0xffffff;
+		            this.sizeAttenuation = true;
+
+		            this.redraw = function () {
+		            	if (sistema) {
+		                	scene.remove(sistema);
+		                }
+		                creaNieve(controles.size, controles.transparent, controles.opacity, controles.sizeAttenuation, controles.color);
+		            };
+		        }
+
+		        addControlGui(controles);
+		        // Creamos el sistema de particulas inicial
+		        controles.redraw();
+
+				// Incluimos la salida del render al elemento html
+				document.body.appendChild(renderer.domElement);
+
+				// Llamamos a la funcion de visualizacion 
+				render();
+			}
+
+			/** 
+			 * Funcion que crea el menu en la parte superior derecha de la ventana
+			 * @param controlObject: objeto gui
+			 **/
+			function addControlGui(controles) {
+				var gui = new dat.GUI();
+
+				gui.add(controles, 'size', 0, 20).onChange(controles.redraw);
+        		gui.add(controles, 'transparent').onChange(controles.redraw);
+        		gui.add(controles, 'opacity', 0, 1).onChange(controles.redraw);
+         		gui.addColor(controles, 'color').onChange(controles.redraw);
+        		gui.add(controles, 'sizeAttenuation').onChange(controles.redraw);
+ 			}
+
+ 			/** 
+			 * Creamos una textura
+			 * @param path: ruta donde se encuentra la imagen de textura
+			 * @param imagen: nombre de la imagen (textura) (con extension)
+			 **/
+			function creaTextura(path, imagen) {
+				var loader = new THREE.TextureLoader();
+				var textura = loader.load(path + imagen);
+				return textura;
+			}
+
+			/** 
+			 * Creacion del sistema de particulas
+			 **/
+			function addParticulas(maxParticulas, path, nombre_textura, size, transparent, opacity, sizeAttenuation, color) {
+				var textura = creaTextura(path, nombre_textura);
+				// Color
+				var color = new THREE.Color(color);
+            	color.setHSL(color.getHSL().h, color.getHSL().s, (Math.random()) * color.getHSL().l);
+
+				// Material
+            	var material = new THREE.PointsMaterial({
+		                size: size,
+		                transparent: transparent,
+		                opacity: opacity,
+		                map: textura, 
+		                blending: THREE.AdditiveBlending,
+		                depthWrite:false,
+		                sizeAttenuation: sizeAttenuation,
+		                color: color
+            	});
+
+            	// Geometria (generica)
+            	var geometria = new THREE.Geometry();
+
+				var rango = 40;
+            	for (var i = 0; i < maxParticulas; i++) {
+                	var particula = new THREE.Vector3(
+                			Math.random() * rango - rango / 2, 
+                			Math.random() * rango * 1.5, 
+                			Math.random() * rango - rango / 2
+                	);
+                	geometria.vertices.push(particula);
+           		}
+
+            	var particulas = new THREE.Points(geometria, material);
+            	//particulas.sortParticles = true;
+           		return particulas;
+			}
+
+			function creaNieve (size, transparent, opacity, sizeAttenuation, color) {
+				sistema = new THREE.Object3D();
+ 	            var particulas = addParticulas(50, "../texturas/particulas/", "snowflake1.png", size, transparent, opacity, sizeAttenuation, color);
+ 	            sistema.add(particulas);
+	            var particulas = addParticulas(50, "../texturas/particulas/", "snowflake2.png", size, transparent, opacity, sizeAttenuation, color);
+ 	            sistema.add(particulas);
+ 	            var particulas = addParticulas(50, "../texturas/particulas/", "snowflake3.png", size, transparent, opacity, sizeAttenuation, color);
+ 	            sistema.add(particulas);
+ 	            var particulas = addParticulas(50, "../texturas/particulas/", "snowflake5.png", size, transparent, opacity, sizeAttenuation, color);
+ 	            sistema.add(particulas);
+ 	            sistema.name = "nieve";
+	            scene.add(sistema);
+			}
+
+			/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+			function render() {
+				// scene.children.forEach(
+				// 	function (hijo) {
+				// 		if (hijo instanceof THREE.ParticleSystem) {
+				// 			var vertices = hijo.geometry.vertices;
+				// 			vertices.forEach(
+				// 				function (v) {
+				// 					v.y -= v.velocityY;
+				// 					v.x -= v.velocityX;
+				// 					v.z -= v.velocityZ;
+
+				// 					if (v.y <= 0) v.y = 60;
+				// 					if (v.x <= -20 || v.x >= 20) v.velocityX = v.velocityX * (-1);
+				// 					if (v.z <= -20 || v.z >= 20) v.velocityZ = v.velocityZ * (-1);
+				// 				}
+				// 			)
+				// 		}
+				// 	}
+				// );
+
+				sistema.rotation.y += 0.01;
+
+				// render utilizando requestAnimationFrame
+				requestAnimationFrame(render);
+				renderer.render(scene, camera);
+			}
+
+	     	/**
+	     	 * Funcion que controla el tamano y asegura que la camara y el render
+		 	 * se adaptan en el instante correcto
+	     	 **/
+	    	function handleResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize(window.innerWidth, window.innerHeight);
+	    	}
+
+			// Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+
+    		// Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+    		window.addEventListener('resize', handleResize, false);
+		</script>
+	</body> 
+</html>

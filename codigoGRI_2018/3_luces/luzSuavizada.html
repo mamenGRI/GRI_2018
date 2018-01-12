@@ -1,0 +1,182 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+		<meta charset=utf-8> 
+		<title> Luz suavizada </title> 
+		<style> 
+			body { margin: 0; } 
+			canvas { width: 100%; height: 100% } 
+		</style> 
+	</head> 
+
+	<body> 
+		<script src="../libs/three.js"></script>
+		<script src="../libs/dat.gui.js"></script>
+		<script src="../libs/camara/OrbitControls.js"></script>
+
+		<script>
+
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			var controles;
+			var orbit;
+
+			var luzHemi;
+			var luzDireccional
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+		        // create a scene, that will hold all our elements such as objects, cameras and lights.
+		        scene = new THREE.Scene();
+		        
+		        // Creamos un Objeto Three.js (render) que usaremos para visualizar la escena
+		        renderer = new THREE.WebGLRenderer();
+		        renderer.setClearColor(0x000000);
+		        renderer.setSize(window.innerWidth, window.innerHeight);
+				renderer.shadowMap.enabled = true;
+				renderer.shadowMap.type = THREE.PCFSoftShadowMap; // por defecto THREE.PCFShadowMap
+
+		       	// CAMARA
+		        camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+		        camera.position.set(-20, 15, 45);
+		        camera.lookAt(new THREE.Vector3(10, 0, 0));
+
+		        orbit = new THREE.OrbitControls(camera);
+
+
+		        // PLANO
+		        var plano = new THREE.Mesh(new THREE.PlaneGeometry(1000, 200, 20, 20), 
+		        							new THREE.MeshLambertMaterial({color: 0xffffff}));
+		        plano.rotation.x = -0.5 * Math.PI;
+		        plano.position.set(15, 0, 0);
+		        plano.receiveShadow  = true;
+      			scene.add(plano);
+
+		        // CUBO
+		        var cubo = new THREE.Mesh(new THREE.BoxGeometry(4, 4, 4), 
+		        			new THREE.MeshLambertMaterial({color: 0xff3333}));
+		        cubo.position.set(-4, 3, 0);
+		        cubo.castShadow = true;
+        		scene.add(cubo);
+
+        		// ESFERA
+		        var esfera = new THREE.Mesh(new THREE.SphereGeometry(4, 25, 25), 
+		        				new THREE.MeshLambertMaterial({color: 0x7777ff}));
+		        esfera.position.set(10, 5, 10);
+		        esfera.castShadow = true;
+		        scene.add(esfera);
+
+		        // FOCO
+		        var foco = new THREE.SpotLight(0xcccccc);
+		        foco.position.set(-40, 60, -10);
+		        foco.lookAt(plano);
+		        scene.add(foco);
+
+		        // LUZ AMBIENTAL
+		        var luz = new THREE.AmbientLight(0x332222);
+		        luz.name = 'ambientLight';
+		        scene.add(luz);
+
+		        // LUZ HEMI
+		        luzHemi = new THREE.HemisphereLight(0x0000ff, 0x00ff00, 0.6);
+		        luzHemi.position.set(0, 500, 0);
+		        luzHemi.intensity = 0.6;
+		        scene.add(luzHemi);
+
+		        // LUZ DIRECCIONAL
+		        luzDireccional = new THREE.DirectionalLight(0xcccccc);
+		        luzDireccional.position.copy(new THREE.Vector3(50, 30, -50));
+		        luzDireccional.castShadow = true;
+		        luzDireccional.shadow.cameraNear = 25;
+		        luzDireccional.shadow.cameraFar = 200;
+		        luzDireccional.shadow.cameraLeft = -150;
+		        luzDireccional.shadow.cameraRight = 150;
+		        luzDireccional.shadow.cameraTop = 50;
+		        luzDireccional.shadow.cameraBottom = -50;
+		        luzDireccional.shadow.mapSize.height = 2048;
+		        luzDireccional.shadow.mapSize.width = 2048;
+		        luzDireccional.name = 'dirLight';
+		        luzDireccional.intensity = 0.6;
+		        scene.add(luzDireccional);
+
+		        // Creacion del objeto de control (GUI)
+				controles = new function() {
+					this.rotSpeed = 0.01;
+		            this.colorSemi = luzHemi.color;
+		            this.colorDireccional = luzDireccional.color;
+		            this.intensidadSemi = 0.6;
+		            this.intensidadDireccional = 0.6;
+	       		};
+				// Incluimos el objeto control en la escena
+				addControlGui(controles);
+
+				// Incluimos la salida del render al elemento html
+				document.body.appendChild(renderer.domElement);
+
+		        // Llamamos a la funcion de visualizacion 
+				render();
+		    }
+
+			/** 
+			 * Funcion que crea el menu en la parte superior derecha de la ventana
+			 * @param controlObject: objeto gui
+			 **/
+			function addControlGui(controles) {
+				var gui = new dat.GUI();
+
+				gui.add(controles, 'rotSpeed', 0.01, 0.3);
+
+		        gui.addColor(controles, 'colorSemi').onChange(
+		        	function (e) {
+		            	luzHemi.groundColor = new THREE.Color(e);
+		        	}
+		        );
+		        gui.addColor(controles, 'colorDireccional').onChange(
+		        	function (e) {
+		            	luzDireccional.color = new THREE.Color(e);
+		        	}
+		        );
+		        gui.add(controles, 'intensidadSemi', 0, 3).onChange(
+		        	function (e) {
+		            	luzHemi.intensity = e;
+		        	}
+		        );
+		        gui.add(controles, 'intensidadDireccional', 0, 3).onChange(
+		        	function (e) {
+		            	luzDireccional.intensity = e;
+		        	}
+		        );
+        	}
+
+        	/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+	        function render() {
+	            requestAnimationFrame(render);
+
+	            orbit.update();
+
+		        var x = luzDireccional.position.x;
+		        var z = luzDireccional.position.z;
+
+		        luzDireccional.position.x = x * Math.cos(controles.rotSpeed) + z * Math.sin(controles.rotSpeed);
+		        luzDireccional.position.z = z * Math.cos(controles.rotSpeed) - x * Math.sin(controles.rotSpeed);
+
+
+	            renderer.render(scene, camera);
+	        }
+
+	        window.onload = init;
+
+		</script>  
+	</body>
+</html>

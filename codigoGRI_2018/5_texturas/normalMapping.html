@@ -1,0 +1,239 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+		<meta charset=utf-8> 
+		<title> Normal mapping </title> 
+		<style> 
+			body { margin: 0; } 
+			canvas { width: 100%; height: 100% } 
+		</style> 
+	</head> 
+
+	<body> 
+		<script src="../libs/three.min.js"></script>
+		<script src="../libs/dat.gui.js"></script>
+
+		<script>
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			var controles;
+
+			var pared1;
+			var pared2;
+
+			var esferaLuz;
+			var luzDireccional;
+
+			var invert = 1;
+    		var phase = 0;
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+				// Creamos la escena que contiene todos los objetos, camaras y luces
+				scene = new THREE.Scene();
+
+				// Creamos el objeto render que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+
+				// Inicializamos el color del fondo y el tamano
+				renderer.setClearColor(0xEEEEEE);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				renderer.shadowMap.enabled = true;
+				renderer.shadowMap.type = THREE.PCFSoftShadowMap; // por defecto THREE.PCFShadowMap
+
+				// Creamos la camara
+				camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+				// Posicionamos la camara en el centro de la escena
+		        camera.position.x = 0;
+		        camera.position.y = 12;
+		        camera.position.z = 28;
+		        camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+		        // Creacion de la pared sin normal-mapping
+				pared1 = creaObjeto("../texturas/general/", "plaster", false);
+		        pared1.rotation.y = -0.5;
+		        pared1.position.x = 12;
+		        scene.add(pared1);
+
+		        // Creacion de la pared con normal-mapping
+		        pared2 = creaObjeto("../texturas/general/", "plaster", true);
+		        pared2.rotation.y = 0.5;
+		        pared2.position.x = -12;
+		        scene.add(pared2);
+		        console.log(pared2.geometry.faceVertexUvs);
+
+		        // Creacion del suelo
+		        var textura  = creaTexturaSimple("../texturas/general/", "floor-wood");
+		        var geometria = new THREE.BoxGeometry(200, 100, 0.1, 30);
+		        var material  = new THREE.MeshPhongMaterial({color: 0x3c3c3c, map: textura});
+		        var suelo = new THREE.Mesh(geometria, material);
+		        suelo.position.y = -7.5;
+		        suelo.rotation.x = -0.5 * Math.PI;
+		        scene.add(suelo);
+
+		        // Luz ambiental
+		        var ambiental = new THREE.AmbientLight(0x242424);
+		        scene.add(ambiental);
+
+		        // Foco
+		        var foco = new THREE.SpotLight(0xffffff);
+				foco.position.set(0, 12, 30);
+				foco.castShadow = true;
+				scene.add(foco);
+
+		        // Luz direccional (con una esfera en movimiento)
+			    var geometria = new THREE.SphereGeometry(0.2);
+			    var material = new THREE.MeshBasicMaterial({color: 0xac6c25});
+			    esferaLuz = new THREE.Mesh(geometria, material);
+			    esferaLuz.castShadow = true;
+			    esferaLuz.position = new THREE.Vector3(3, 3, 3);
+			    scene.add(esferaLuz);
+
+    			luzDireccional = new THREE.PointLight(0xff5808);
+    			scene.add(luzDireccional);
+
+    			// Menu
+		        controles = new function () {
+		            this.normalScale = 1;
+		            this.changeTexture = "plaster";
+		            this.rotate = false;
+
+		            this.changeTexture = function (e) {
+		                var textura = creaTexturaSimple("../texturas/general/", e);
+		                pared1.material.map = textura;
+		                pared2.material.map = textura;
+
+		                var texturaNormal = creaTexturaNormal("../texturas/general/", e);
+		                pared2.material.normalMap = texturaNormal;
+            		}
+
+		            this.updateNormal = function (e) {
+		                console.log(pared2.material.normalScale);
+		                pared2.material.normalScale.set(e, e);
+		            }
+        		};
+
+        		addControlGui(controles);
+
+				// Incluimos la salida del render al elemento html
+				document.body.appendChild(renderer.domElement);
+
+				// Llamamos a la funcion de visualizacion 
+				render();
+			}
+
+			/** 
+			 * Funcion que crea el menu en la parte superior derecha de la ventana
+			 * @param controlObject: objeto gui
+			 **/
+			function addControlGui(controles) {
+				var gui = new dat.GUI();
+
+				gui.add(controles, "normalScale", -2, 2).onChange(controles.updateNormal);
+		        gui.add(controles, "changeTexture", ['plaster', 'bathroom', 'metal-floor']).onChange(controles.changeTexture);
+		        gui.add(controles, "rotate");
+			}
+
+			/** 
+			 * Creamos una textura
+			 * @param path: ruta donde se encuentra la imagen de textura
+			 * @param imagen: nombre de la imagen (textura) (sin extension)
+			 **/
+			function creaTexturaSimple(path, imagen) {
+				var loader = new THREE.TextureLoader();
+				var textura = loader.load(path + imagen + ".jpg");
+				return textura;
+			}
+
+			/** 
+			 * Creamos una textura normal
+			 * @param path: ruta donde se encuentra la imagen de textura
+			 * @param imagen: nombre de la imagen (textura) (sin extension)
+			 **/
+			function creaTexturaNormal(path, imagen) {
+				var loader = new THREE.TextureLoader();
+				var textura = loader.load(path + imagen + "-normal.jpg");
+				return textura;
+			}
+
+			/** 
+			 * Creamos un objeto con textura
+			 * @param path: ruta donde se encuentra la imagen de textura
+			 * @param imagen: nombre de la imagen (textura) (sin extension)
+			 * @param conNormalMapping: true/false
+			 **/
+			function creaObjeto(path, imagen, conNormalMapping) {
+				var geometria = new THREE.BoxGeometry(15, 15, 2);
+				geometria.computeVertexNormals();
+
+	            var textura = creaTexturaSimple(path, imagen);
+	            var material = new THREE.MeshPhongMaterial();
+	            material.map = textura;
+
+				if (conNormalMapping == true) {
+	                var normalMap = creaTexturaNormal(path, imagen);
+	                material.normalMap = normalMap;
+	            }
+
+	            var objeto = new THREE.Mesh(geometria, material);
+	            return objeto;
+        	}
+
+			/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+			function render() {
+				if (controles.rotate) {
+	                pared1.rotation.y -= 0.01;
+	                pared2.rotation.y += 0.01;
+	            }
+
+	            if (phase > 2 * Math.PI) {
+            		invert = invert * -1;
+            		phase -= 2 * Math.PI;
+        		} else {
+            		phase += 0.03;
+        		}
+
+		        esferaLuz.position.z = +(21 * (Math.sin(phase)));
+		        esferaLuz.position.x = -14 + (14 * (Math.cos(phase)));
+
+		        if (invert < 0) {
+		            var pivot = 0;
+		            esferaLuz.position.x = (invert * (esferaLuz.position.x - pivot)) + pivot;
+		        }
+
+		        luzDireccional.position = esferaLuz.position;
+
+				// render utilizando requestAnimationFrame
+				requestAnimationFrame(render);
+				renderer.render(scene, camera);
+			}
+
+	     	/**
+	     	 * Funcion que controla el tamano y asegura que la camara y el render
+		 	 * se adaptan en el instante correcto
+	     	 **/
+	    	function handleResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize(window.innerWidth, window.innerHeight);
+	    	}
+
+			// Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+
+    		// Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+    		window.addEventListener('resize', handleResize, false);
+		</script>
+	</body> 
+</html>

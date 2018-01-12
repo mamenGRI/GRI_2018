@@ -1,0 +1,185 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+		<meta charset=utf-8> 
+		<title> Tetera a partir de un fichero JSON (solo geometria) </title> 
+		<style> 
+			body { margin: 0; } 
+			canvas { width: 100%; height: 100% } 
+		</style> 
+	</head> 
+
+	<body>
+		<script src="../libs/three.js"></script>
+		<script src="../libs/camara/OrbitControls.js"></script>
+
+		<script>
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			var orbit;
+
+			var miReloj;
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+				// Creamos un reloj
+                miReloj = new THREE.Clock();
+
+				// Creamos la escena que contiene todos los objetos, camaras y luces
+				scene = new THREE.Scene();
+
+				// Creamos un Objeto Three.js (render) que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+				// Inicializamos el color del fondo y el tamano
+				renderer.setClearColor(new THREE.Color(0xEEEEEE));
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				renderer.shadowMap.enabled = true;
+				renderer.shadowMap.type = THREE.PCFSoftShadowMap; // por defecto THREE.PCFShadowMap
+
+				// Camara
+		        camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.1, 1000 );
+		        camera.position.z = 80;
+
+		        // Controles de la camara (rotacion automatica)
+		        orbit = new THREE.OrbitControls(camera);
+                orbit.autoRotate = true;
+
+		        // Luz ambiental
+				var ambiental = new THREE.AmbientLight( 0xff5722 );
+				ambiental.intensity = 0.1;
+				ambiental.position.set(0, 40, 0);
+
+				// luz direccional
+				var luz1 = new THREE.DirectionalLight(0xf4ff81);
+				luz1.position.set(-1, -1, -1).normalize();
+			    luz1.intensity = 1.2;
+			    luz1.shadow.camera.left = -100;
+				luz1.shadow.camera.right = 100;
+				luz1.shadow.camera.top = 100;
+				luz1.shadow.camera.bottom = -100;
+				luz1.shadow.camera.near = 2;
+			    luz1.shadow.camera.far = 200;
+			    luz1.castShadow = true;
+	        	luz1.shadow.camera.fov = 50;
+		        luz1.distance = 0;
+		        luz1.shadow.mapSize.width = 2048;
+		        luz1.shadow.mapSize.height = 2048;
+			    scene.add(luz1);
+			    //scene.add(new THREE.DirectionalLightHelper(luz1, 5));
+			    console.log(luz1)
+
+			    // luz direccional
+				var luz2 = new THREE.DirectionalLight(0xf0f8ff);
+				luz2.position.set(1, 1, 1).normalize();
+			    luz2.intensity = 0.8;
+			    luz2.shadow.camera.left = -100;
+				luz2.shadow.camera.right = 100;
+				luz2.shadow.camera.top = 100;
+				luz2.shadow.camera.bottom = -100;
+				luz2.shadow.camera.near = 2;
+			    luz2.shadow.camera.far = 200;
+			    luz2.castShadow = true;
+	        	luz2.shadow.camera.fov = 50;
+		        luz2.distance = 0;
+		        luz2.shadow.mapSize.width = 2048;
+		        luz2.shadow.mapSize.height = 2048;
+			    scene.add(luz2);
+				//scene.add(new THREE.DirectionalLightHelper(luz2, 5));
+			    console.log(luz2)
+
+			    // manager para la carga de objetos y de texturas
+		        var manager = new THREE.LoadingManager();
+
+				// Cargamos el objeto tetera de un fichero json (solo la geometria)
+				var loader = new THREE.ObjectLoader(manager);
+				loader.load("../json/utah-teapot.json", 
+					function ( objeto ) {
+						cargaGeometriaJSON( objeto );
+				});
+
+				// Incluimos la salida del render al elemento html
+				document.body.appendChild(renderer.domElement);
+
+				// Llamamos a la funcion de visualizacion 
+				render();
+
+			}
+
+			/**
+			 * Funcion para cargar el objeto de un fichero json
+			 * Solamente cargamos la geometria
+			 * @params obj: objeto json
+			 **/
+			function cargaGeometriaJSON(obj) {
+				// Tomamos solamente la geometria del objeto
+				var geometria = obj.children[0].geometry;
+
+				// Material del objeto
+				var material = new THREE.MeshLambertMaterial({color: 0x7777ff});
+
+				// Creamos la malla
+				var malla = new THREE.Mesh(geometria, material);
+
+				// Recalculamos las normales de la caras y de los vertices
+				// malla.geometry.computeFaceNormals();
+				// malla.geometry.computeVertexNormals();
+				// malla.geometry.normalsNeedUpdate = true;
+
+				// Colocamos y rotamos el objeto
+				// Le asignamos un nombre
+				malla.position.set(-4, 0, 3);
+				malla.rotation.x = -1;
+				malla.castShadow = true;
+
+				// Incluimos unos ejes locales en el objeto
+				var ejesLocales = new THREE.AxesHelper( 100 );
+				malla.add(ejesLocales);
+
+				// Incluimos el objeto en la escena
+				scene.add(malla);
+
+				console.log(malla)
+ 			}
+
+			/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+			function render() {
+			    var delta = miReloj.getDelta();
+
+                // Adaptamos los controles trackball
+                orbit.update(delta);
+
+                // render utilizando requestAnimationFrame
+                requestAnimationFrame(render);
+                renderer.render(scene, camera);
+
+			}
+
+	     	/**
+	     	 * Funcion que controla el tamano y asegura que la camara y el render
+		 	 * se adaptan en el instante correcto
+	     	 **/
+	    	function handleResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+			    camera.updateProjectionMatrix();
+			    renderer.setSize(window.innerWidth, window.innerHeight);
+	    	}
+
+			// Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+
+    		// Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+    		window.addEventListener('resize', handleResize, false);
+		</script>
+	</body> 
+</html>

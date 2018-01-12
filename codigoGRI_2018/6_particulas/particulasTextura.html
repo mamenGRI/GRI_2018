@@ -1,0 +1,215 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+		<meta charset=utf-8> 
+		<title> Sistema de Particulas con textura </title> 
+		<style> 
+			body { 
+				margin: 0;
+            	overflow: hidden;
+            	background-color: #000000; 
+            } 
+		</style> 
+	</head> 
+
+	<body> 
+		<script src="../libs/three.js"></script>
+		<script src="../libs/dat.gui.js"></script>
+
+		<script>
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			var controles;
+
+			var sistema;
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+				// Creamos la escena que contiene todos los objetos, camaras y luces
+				scene = new THREE.Scene();
+
+				// Creamos el objeto render que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+        		renderer.setClearColor(new THREE.Color(0x000000));
+        		renderer.setSize(window.innerWidth, window.innerHeight);
+
+				// Creamos la camara
+				camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+				// Posicionamos la camara en el centro de la escena
+		        camera.position.x = 20;
+		        camera.position.y = 0;
+		        camera.position.z = 150;
+		        camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+		        creaParticulas();
+
+		        // Controles
+		        controles = new function () {
+		            this.size = 15;
+		            this.transparent = true;
+		            this.opacity = 0.6;
+		            this.color = 0xffffff;
+		            this.sizeAttenuation = true;
+		            this.rotateSystem = true;
+
+		            this.redraw = function () {
+		                if (scene.getObjectByName("particulas")) {
+		                    scene.remove(scene.getObjectByName("particulas"));
+		                }
+		                creaParticulas(controles.size, controles.transparent, controles.opacity, controles.sizeAttenuation, controles.color);
+		            };
+		        }
+
+		        addControlGui(controles);
+		        controles.redraw();
+
+				// Incluimos la salida del render al elemento html
+				document.body.appendChild(renderer.domElement);
+
+				// Llamamos a la funcion de visualizacion 
+				render();
+
+			}
+
+			/** 
+			 * Funcion que crea el menu en la parte superior derecha de la ventana
+			 * @param controlObject: objeto gui
+			 **/
+			function addControlGui(controles) {
+				var gui = new dat.GUI();
+
+				gui.add(controles, 'size', 0, 20).onChange(controles.redraw);
+        		gui.add(controles, 'transparent').onChange(controles.redraw);
+        		gui.add(controles, 'opacity', 0, 1).onChange(controles.redraw);
+        		gui.addColor(controles, 'color').onChange(controles.redraw);
+        		gui.add(controles, 'sizeAttenuation').onChange(controles.redraw);
+        		gui.add(controles, 'rotateSystem');
+			}
+
+
+			function generaTextura() {
+	            var canvas = document.createElement('canvas');
+	            canvas.width = 32;
+	            canvas.height = 32;
+
+	            var ctx = canvas.getContext('2d');
+
+	            // Cuerpo
+	            ctx.translate(-81, -84);
+
+	            ctx.fillStyle = "orange";
+	            ctx.beginPath();
+	            ctx.moveTo(83, 116);
+	            ctx.lineTo(83, 102);
+	            ctx.bezierCurveTo(83, 94, 89, 88, 97, 88);
+	            ctx.bezierCurveTo(105, 88, 111, 94, 111, 102);
+	            ctx.lineTo(111, 116);
+	            ctx.lineTo(106.333, 111.333);
+	            ctx.lineTo(101.666, 116);
+	            ctx.lineTo(97, 111.333);
+	            ctx.lineTo(92.333, 116);
+	            ctx.lineTo(87.666, 111.333);
+	            ctx.lineTo(83, 116);
+	            ctx.fill();
+
+	            // Ojos
+	            ctx.fillStyle = "white";
+	            ctx.beginPath();
+	            ctx.moveTo(91, 96);
+	            ctx.bezierCurveTo(88, 96, 87, 99, 87, 101);
+	            ctx.bezierCurveTo(87, 103, 88, 106, 91, 106);
+	            ctx.bezierCurveTo(94, 106, 95, 103, 95, 101);
+	            ctx.bezierCurveTo(95, 99, 94, 96, 91, 96);
+	            ctx.moveTo(103, 96);
+	            ctx.bezierCurveTo(100, 96, 99, 99, 99, 101);
+	            ctx.bezierCurveTo(99, 103, 100, 106, 103, 106);
+	            ctx.bezierCurveTo(106, 106, 107, 103, 107, 101);
+	            ctx.bezierCurveTo(107, 99, 106, 96, 103, 96);
+	            ctx.fill();
+
+	            // Pupilas
+	            ctx.fillStyle = "blue";
+	            ctx.beginPath();
+	            ctx.arc(101, 102, 2, 0, Math.PI * 2, true);
+	            ctx.fill();
+	            ctx.beginPath();
+	            ctx.arc(89, 102, 2, 0, Math.PI * 2, true);
+	            ctx.fill();
+
+	            var textura = new THREE.Texture(canvas);
+	            textura.needsUpdate = true;
+	            return textura;
+        	}
+
+			/** 
+			 * Creacion del sistema de particulas
+			 **/
+			function creaParticulas(size, transparent, opacity, sizeAttenuation, color) {
+				var textura = generaTextura();
+				var geometria = new THREE.Geometry();
+				var material = new THREE.PointsMaterial({
+		                size: size,
+		                transparent: transparent,
+		                opacity: opacity,
+		                map: textura,
+		                sizeAttenuation: sizeAttenuation,
+		                color: color
+            	});
+
+				var rango = 500;
+            	for (var i = 0; i < 5000; i++) {
+                	var particula = new THREE.Vector3(
+                			Math.random() * rango - rango / 2, 
+                			Math.random() * rango - rango / 2, 
+                			Math.random() * rango - rango / 2
+                	);
+                	geometria.vertices.push(particula);
+           		 }
+
+            	sistema = new THREE.Points(geometria, material);
+            	sistema.name = "particulas";
+           		scene.add(sistema);
+			}
+
+			/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+			function render() {
+
+				if (controles.rotateSystem) {
+                	sistema.rotation.x += 0.01;
+                	sistema.rotation.z += 0.01;
+            	}
+
+				// render utilizando requestAnimationFrame
+				requestAnimationFrame(render);
+				renderer.render(scene, camera);
+			}
+
+	     	/**
+	     	 * Funcion que controla el tamano y asegura que la camara y el render
+		 	 * se adaptan en el instante correcto
+	     	 **/
+	    	function handleResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize(window.innerWidth, window.innerHeight);
+	    	}
+
+			// Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+
+    		// Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+    		window.addEventListener('resize', handleResize, false);
+		</script>
+	</body> 
+</html>

@@ -1,0 +1,149 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+		<meta charset=utf-8> 
+		<title> Multiples materiales en un mismo objeto </title> 
+		<style> 
+			body { margin: 0; } 
+			canvas { width: 100%; height: 100% } 
+		</style> 
+	</head> 
+
+	<body> 
+		<script src="../libs/three.min.js"></script> 
+		<script src="../libs/dat.gui.min.js"></script> 
+
+		<script>
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			var grupo;
+
+			var controles;
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+				// Creamos la escena que contiene todos los objetos, camaras y luces
+				scene = new THREE.Scene();
+
+				// Creamos el objeto render que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+
+				// Inicializamos el color del fondo y el tamano
+				renderer.setClearColor(0xEEEEEE);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				renderer.shadowMap.enabled = true;
+				renderer.shadowMap.type = THREE.PCFSoftShadowMap; // por defecto THREE.PCFShadowMap
+ 
+				// Creamos la camara
+				camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+				// Posicionamos la camara en el centro de la escena
+		        camera.position.x = -20;
+		        camera.position.y = 30;
+		        camera.position.z = 40;
+		        camera.lookAt(scene.position);
+
+				// Suelo
+				var geometria = new THREE.PlaneGeometry(100, 100, 4, 4);
+				var material = new THREE.MeshBasicMaterial({color: 0x555555});
+		        var suelo = new THREE.Mesh(geometria, material);
+		        suelo.rotation.x = -Math.PI / 2;
+		        suelo.position.y = -20;
+		        scene.add(suelo);
+
+		        // Creamos un array de colores, uno diferente para cada cara
+		        var materiales = [];
+		        materiales.push(new THREE.MeshBasicMaterial({ color: 0x009e60  }));
+		        materiales.push(new THREE.MeshBasicMaterial({ color: 0x0051ba  }));
+		        materiales.push(new THREE.MeshBasicMaterial({ color: 0xffd500  }));
+		        materiales.push(new THREE.MeshBasicMaterial({ color: 0xff5800  }));
+		        materiales.push(new THREE.MeshBasicMaterial({ color: 0xC41E3A }));
+		        materiales.push(new THREE.MeshBasicMaterial({ color: 0xffffff  }));
+		        
+		         // Grupo: Cubo de Rubik
+		        grupo = new THREE.Mesh();
+		        // Creamos cubos en el cual los colores de las caras 
+				// vienen dados por el array de colores anteriormente definido
+		        for (var x = 0; x < 3; x++) {
+		            for (var y = 0; y < 3; y++) {
+		                for (var z = 0; z < 3; z++) {
+		                    var geometria = new THREE.CubeGeometry(2.9, 2.9, 2.9);
+		                    var cubo = new THREE.Mesh(geometria, materiales);
+		                    cubo.position = new THREE.Vector3(x * 3 - 3, y * 3, z * 3 - 3);
+		                    grupo.add(cubo);
+		                }
+		            }
+		        }
+		        scene.add(grupo);
+
+		        // Foco
+		        var spotLight = new THREE.SpotLight(0xffffff);
+		        spotLight.position.set(-40, 60, -10);
+		        spotLight.castShadow = true;
+		        scene.add(spotLight);
+
+		        // Menu
+		       	controles = new function () {
+		            this.rotationSpeed = 0.01;
+		            this.numberOfObjects = scene.children.length;
+		        }
+
+		        addControlGui(controles);
+
+				// Incluimos la salida del render al elemento html
+				document.body.appendChild(renderer.domElement);
+
+				// Llamamos a la funcion de visualizacion 
+				render();
+
+			}
+
+			/** 
+			 * Funcion que crea el menu en la parte superior derecha de la ventana
+			 * @param controlObject: objeto gui
+			 **/
+			function addControlGui(controles) {
+				var gui = new dat.GUI();
+
+				gui.add(controles, 'rotationSpeed', 0, 0.1);
+			}
+
+			/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+			function render() {
+
+				grupo.rotation.y += controles.rotationSpeed;
+
+				// render utilizando requestAnimationFrame
+				requestAnimationFrame(render);
+				renderer.render(scene, camera);
+			}
+
+	     	/**
+	     	 * Funcion que controla el tamano y asegura que la camara y el render
+		 	 * se adaptan en el instante correcto
+	     	 **/
+	    	function handleResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize(window.innerWidth, window.innerHeight);
+	    	}
+
+			// Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+
+    		// Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+    		window.addEventListener('resize', handleResize, false);
+
+		</script>
+	</body> 
+</html>

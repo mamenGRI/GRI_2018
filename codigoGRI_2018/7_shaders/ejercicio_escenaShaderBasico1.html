@@ -1,0 +1,201 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+		<meta charset=utf-8> 
+		<title> Escena con shader basico (wireframe en rojo) </title> 
+		<style> 
+			body { margin: 0; } 
+			canvas { width: 100%; height: 100% } 
+		</style> 
+	</head> 
+
+	<body>
+		<script src="../libs/three.js"></script>
+		<script src="../libs/camara/OrbitControls.js"></script>
+
+		<script type="x-shader/x-vertex" id="vertex-shader">
+			varying vec3 f_color;
+
+			void main() {
+				f_color = vec3(1.0, 0.0, 0.0);
+
+				gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+			}
+		</script>
+
+		<script type="x-shader/x-fragment" id="fragment-shader">
+			varying vec3 f_color;
+		
+			void main() {
+				gl_FragColor = vec4(f_color, 1.0);
+			}
+		</script>
+
+		<script>
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			var orbit;
+
+			var miReloj;
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+
+				// Creamos un reloj
+                miReloj = new THREE.Clock();
+
+				// Creamos la escena que contiene todos los objetos, camaras y luces
+				scene = new THREE.Scene();
+
+				// Creamos el objeto render que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer( { antialias: true } );
+
+				// Inicializamos el color del fondo y el tamano
+				renderer.setClearColor( 0xf0f0f0 );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.shadowMap.enabled = true;
+				renderer.shadowMap.type = THREE.PCFSoftShadowMap; // por defecto THREE.PCFShadowMap
+
+				// Camara
+		        camera = new THREE.PerspectiveCamera( 30, window.innerWidth / window.innerHeight, 1, 10000 );
+		        camera.position.x = 1200;
+		        camera.position.y = 1500;
+		        camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+			    // Control orbital de la camara
+				orbit = new THREE.OrbitControls(camera);
+                orbit.autoRotate = false;
+
+			    // CUBO
+			    var cubo = creaCubo();
+			    scene.add(cubo);
+
+		        // PLANO
+		        var plano = creaPlano();
+		        scene.add(plano);
+
+      			// Luz ambiental
+      			var luz0 = new THREE.AmbientLight(0x666666);
+				scene.add(luz0);
+
+				// luz direccional
+				var luz1 = creaLuzDireccional(1.75, 300, 400, 50, "#dfebff");
+				luz1.position.multiplyScalar(1.3);
+			    scene.add(luz1);			    
+				scene.add(new THREE.DirectionalLightHelper(luz1, 50));
+
+				// Incluimos la salida del render al elemento html
+				document.body.appendChild(renderer.domElement);
+
+				// Llamamos a la funcion de visualizacion 
+				render();
+
+			}
+
+			/**
+			 * Funcion que crea una luz direccional
+			 * @params intensidad: intensidad de la luz
+			 * @params x, y, z: direccion de la luz
+			 * @params color: color de la luz
+			 **/
+			function creaLuzDireccional(intensidad, x, y, z, color) {
+				var luz = new THREE.DirectionalLight(color);
+				luz.position.set(x, y, z);
+			    luz.intensity = intensidad;
+			    luz.shadow.camera.far = 1000;
+			    luz.shadow.camera.near = 0.1;
+			    luz.shadow.camera.left = -200;
+			    luz.shadow.camera.right = 200;
+			    luz.shadow.camera.top = 200;
+			    luz.shadow.camera.bottom = -200;
+			    luz.shadow.mapSize.height = 512;
+			    luz.shadow.mapSize.width = 512;
+			    luz.castShadow = true;
+			    return(luz)
+			}
+
+			function materialEspecial() {
+				var uniformes = THREE.UniformsUtils.merge([
+					THREE.UniformsLib[ "ambient" ],
+			    	THREE.UniformsLib['lights']
+			  	]);
+
+			    var material = new THREE.ShaderMaterial({
+		        	side: THREE.DoubleSide,
+		        	wireframe: true,
+		        	uniforms: uniformes,
+	            	lights: true,
+			        vertexShader: document.getElementById('vertex-shader').textContent,
+			        fragmentShader: document.getElementById('fragment-shader').textContent
+			    });
+
+			    return (material);
+			}
+
+			/**
+			 * Funcion que crea un cubo con un shader propio
+			 **/
+			function creaCubo() {
+				var miMaterial = materialEspecial();
+
+		        // CUBO con shader propio
+		        var cubo = new THREE.Mesh(new THREE.BoxGeometry(100, 100, 100), miMaterial);
+		        cubo.position.set(0, 100, 0);
+		        cubo.castShadow = true;
+        		return(cubo);
+        	}
+
+			/**
+			 * Funcion que crea un plano con un shader propio
+			 **/
+			function creaPlano() {
+			  	var miMaterial = materialEspecial();
+
+        		// PLANO con shader propio
+		        var plano = new THREE.Mesh(new THREE.PlaneGeometry(500, 500), miMaterial);
+		        plano.rotation.x = -Math.PI / 2;
+		        plano.receiveShadow  = true;
+      			return(plano);
+        	}
+
+			/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+			function render() {
+        		var delta = miReloj.getDelta();
+  
+                // Adaptamos los controles trackball
+                orbit.update(delta);
+
+                // render utilizando requestAnimationFrame
+                requestAnimationFrame(render);
+                renderer.render(scene, camera);
+			}
+
+	     	/**
+	     	 * Funcion que controla el tamano y asegura que la camara y el render
+		 	 * se adaptan en el instante correcto
+	     	 **/
+	    	function handleResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+			    camera.updateProjectionMatrix();
+			    renderer.setSize(window.innerWidth, window.innerHeight);
+	    	}
+
+			// Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+
+    		// Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+    		window.addEventListener('resize', handleResize, false);
+		</script>
+	</body> 
+</html>

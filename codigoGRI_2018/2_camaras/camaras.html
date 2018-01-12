@@ -1,0 +1,186 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+		<meta charset=utf-8> 
+		<title> Camaras </title> 
+		<style> 
+			body { margin: 0; } 
+			canvas { width: 100%; height: 100% } 
+		</style> 
+	</head> 
+
+	<body> 
+		<script src="../libs/three.js"></script>
+		<script src="../libs/dat.gui.js"></script>
+
+		<script>
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			var controles;
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+				// Creamos la escena que contiene todos los objetos, camaras y luces
+				scene = new THREE.Scene();
+
+				// Creamos el objeto render que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+				// Inicializamos el color del fondo y el tamano
+				renderer.setClearColor(0xEEEEEE);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				renderer.shadowMap.enabled = true;
+				renderer.shadowMap.type = THREE.PCFSoftShadowMap; // por defecto THREE.PCFShadowMap
+
+				// Creamos la camara con proyeccion perspectiva
+				camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+				// Posicionamos la camara y la enfocamos hacia el centro de la escena
+				camera.position.x = 120;
+				camera.position.y = 60;
+				camera.position.z = 180;
+				camera.lookAt(scene.position);
+
+				// Creamos un plano
+				var geometria = new THREE.PlaneGeometry(180, 180);
+				var material = new THREE.MeshLambertMaterial({color: 0xffffff});
+				var plano = new THREE.Mesh(geometria, material);
+		        // Rotamos y posicionamos el plano
+		        plano.rotation.x = -0.5 * Math.PI;
+		        plano.position.x = 0;
+		        plano.position.y = 0;
+		        plano.position.z = 0;
+				// Incluimos el plano en la escena
+				scene.add(plano);
+
+				var altura  = geometria.parameters.height;
+				var anchura = geometria.parameters.width;
+
+				// Creamos la escena (plano con cubos)
+				creaCubitos(altura, anchura);
+
+				// Incluimos una luz ambiental
+				var ambiental = new THREE.AmbientLight(0x292929);
+        		scene.add(ambiental);
+
+				// Incluimos una luz direccional
+				var luzDireccional = new THREE.DirectionalLight(0xffffff, 0.7);
+		        luzDireccional.position.set(-20, 40, 60);
+		        scene.add(luzDireccional);
+
+				// Creacion del objeto de control (GUI)
+				var controles = new function () {
+		            this.perspective = "Perspective";
+		            this.switchCamera = function () {
+		                	if (camera instanceof THREE.PerspectiveCamera) {
+		                    	camera = new THREE.OrthographicCamera(
+								  window.innerWidth / -16, 
+								  window.innerWidth / 16, 
+								  window.innerHeight / 16, window.innerHeight / -16, -200, 500
+						        );
+		                    	
+		                        camera.position.x = 120;
+		                    	camera.position.y = 60;
+		                    	camera.position.z = 180;
+
+		                    	camera.lookAt(scene.position);
+		                    	this.perspective = "Orthographic";
+
+		                	} else {
+		                    	camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+		                    	camera.position.x = 120;
+		                    	camera.position.y = 60;
+		                    	camera.position.z = 180;
+
+		                    	camera.lookAt(scene.position);
+		                    	this.perspective = "Perspective";
+		                    }
+		            };
+		        };
+
+				// Incluimos el objeto control en la escena
+				addControlGui(controles);
+
+				// Incluimos la salida del render al elemento html
+				document.body.appendChild(renderer.domElement);
+
+		        // Llamamos a la funcion de visualizacion 
+				render();
+			}
+			
+			/** 
+			 * Funcion que crea el menu en la parte superior derecha de la ventana
+			 * @param controlObject: objeto gui
+			 **/
+			function addControlGui(controles) {
+				var gui = new dat.GUI();
+		        gui.add(controles, 'switchCamera');
+		        gui.add(controles, 'perspective').listen();
+		    }
+
+			/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+			function render() {
+				// render utilizando requestAnimationFrame
+				renderer.render(scene, camera);
+        		requestAnimationFrame(render);
+			}
+
+			/**
+			 * Funcion auxiliar que crea un cubo en la posicion x,y
+			 * @param x, y: coordenadas donde crear el cubo
+			 * @param colorCubo: color del cubo
+			 **/
+			function addCubo(x, y, z, colorCubo) {
+				// Creamos un cubo y lo asignamos a la escena
+				var geometria  = new THREE.BoxGeometry(4, 4, 4);
+				var material   = new THREE.MeshLambertMaterial();
+				material.color = new THREE.Color(colorCubo, 0, 0);
+				var cubo = new THREE.Mesh(geometria, material);
+				cubo.position.x = x;
+				cubo.position.y = y;
+				cubo.position.z = z;
+				scene.add(cubo);
+			}
+
+			/**
+			 * Funcion auxiliar que crea un suelo formado por cubos (color aleatorio)
+			 **/
+			function creaCubitos(altura, anchura) {
+				for (var j = 0; j < (altura / 5); j++) {
+            		for (var i = 0; i < (anchura / 5); i++) {
+            			var colorCubo = Math.random() * 0.75 + 0.25;
+            			var z = -(altura / 2) + 2 + (j * 5);
+	                	var x = -(anchura / 2) + 2 + (i * 5);
+						addCubo(x, 2, z, colorCubo);
+				    }
+        		}
+			}
+
+	     	/**
+	     	 * Funcion que controla el tamano y asegura que la camara y el render
+		 	 * se adaptan en el instante correcto
+	     	 **/
+	    	function handleResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize(window.innerWidth, window.innerHeight);
+	    	}
+
+			// Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+
+    		// Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+    		window.addEventListener('resize', handleResize, false);
+		</script>
+	</body> 
+</html>

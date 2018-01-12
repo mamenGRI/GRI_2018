@@ -1,0 +1,111 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+		<meta charset=utf-8> 
+		<title> Camara zoom version 0 </title> 
+		<style> 
+			body { margin: 0; } 
+			canvas { width: 100%; height: 100% } 
+		</style> 
+	</head> 
+
+	<body> 
+		<script src="../libs/three.js"></script>
+		<script src="../libs/dat.gui.js"></script>
+
+		<script>
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			var fov;
+			var zoom = 1.0;
+        	var inc = -0.01;
+
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+				// Creamos la escena que contiene todos los objetos, camaras y luces
+				scene = new THREE.Scene();
+
+				// Creamos el objeto render que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+				// Inicializamos el color del fondo y el tamano
+				renderer.setClearColor(0xEEEEEE);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				renderer.shadowMap.enabled = true;
+				renderer.shadowMap.type = THREE.PCFSoftShadowMap; // por defecto THREE.PCFShadowMap
+
+				// Creamos la camara con proyeccion perspectiva
+				camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+				// Posicionamos la camara y la enfocamos hacia el centro de la escena
+				camera.position.x = 60;
+        		camera.position.y = 60;
+        		camera.position.z = 60;
+        		camera.lookAt(scene.position);
+
+        		// fov
+        		fov = camera.fov;
+
+				// Incluimos una luz posicional
+				var luz = new THREE.PointLight(0xffffff);
+			    luz.position.y = 150;
+			    luz.position.z = 200;
+			    scene.add(luz);
+
+        		// Incluimos un cubo en la escena
+        		var geometria = new THREE.BoxGeometry(10, 10, 10);
+        		var material = new THREE.MeshLambertMaterial({color: 0xff0000});
+        		var cubo = new THREE.Mesh(geometria, material);
+       			scene.add(cubo);
+
+				// Incluimos la salida del render al elemento html
+				document.body.appendChild(renderer.domElement);
+
+		        // Llamamos a la funcion de visualizacion 
+				render();
+			}
+
+			/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+			function render() {
+				// render utilizando requestAnimationFrame
+       			requestAnimationFrame(render);
+
+       			camera.fov = fov * zoom;
+     			camera.updateProjectionMatrix();
+      			zoom += inc;
+
+      			if ( zoom <= 0.2 || zoom >= 1.0 ){
+          			inc = -inc;
+       			}
+
+       			renderer.render(scene, camera);
+			}
+
+	     	/**
+	     	 * Funcion que controla el tamano y asegura que la camara y el render
+		 	 * se adaptan en el instante correcto
+	     	 **/
+	    	function handleResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize(window.innerWidth, window.innerHeight);
+	    	}
+
+			// Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+
+    		// Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+    		window.addEventListener('resize', handleResize, false);
+		</script>
+	</body> 
+</html>

@@ -1,0 +1,193 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+		<meta charset=utf-8> 
+		<title> Phong Material </title> 
+		<style> 
+			body { margin: 0; } 
+			canvas { width: 100%; height: 100% } 
+		</style> 
+	</head> 
+
+	<body> 
+		<script src="../libs/three.min.js"></script> 
+		<script src="../libs/dat.gui.min.js"></script> 
+
+		<script>
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			var esfera;
+
+			var material;
+
+			var controles;
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+				// Creamos la escena que contiene todos los objetos, camaras y luces
+				scene = new THREE.Scene();
+
+				// Creamos el objeto render que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+
+				// Inicializamos el color del fondo y el tamano
+				renderer.setClearColor(0xEEEEEE);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				renderer.shadowMap.enabled = true;
+				renderer.shadowMap.type = THREE.PCFSoftShadowMap; // por defecto THREE.PCFShadowMap
+ 
+				// Creamos la camara
+				camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+				// Posicionamos la camara en el centro de la escena
+		        camera.position.x = -20;
+		        camera.position.y = 30;
+		        camera.position.z = 40;
+		        camera.lookAt(new THREE.Vector3(10, 0, 0));
+
+				// GroundMesh
+				var groundGeom = new THREE.PlaneGeometry(100, 100, 4, 4);
+		        var groundMesh = new THREE.Mesh(groundGeom, new THREE.MeshBasicMaterial({color: 0x555555}));
+		        groundMesh.rotation.x = -Math.PI / 2;
+		        groundMesh.position.y = -20;
+		        scene.add(groundMesh);
+
+		        // Material para los objetos
+		        material = new THREE.MeshPhongMaterial({color: 0x7777ff});
+		        material.transparent = true;
+
+		        // Esfera
+		       	var geometria = new THREE.SphereGeometry(14, 20, 20);
+		       	esfera = new THREE.Mesh(geometria, material);
+		       	// Movemos la esfera
+		        esfera.position.x = 0;
+		        esfera.position.y = 3;
+		        esfera.position.z = 2;
+        		scene.add(esfera);
+
+		        // Foco
+		        var spotLight = new THREE.SpotLight(0xffffff);
+		        spotLight.position.set(0, 30, 60);
+		        spotLight.intensity = 0.6;
+		        spotLight.castShadow = true;
+		        scene.add(spotLight);
+
+		        // Menu
+		       	controles = new function () {
+		            this.rotationSpeed = 0.01;
+		            this.opacity = material.opacity;
+		            this.overdraw = material.overdraw;
+		            this.visible = material.visible;
+		            this.emissive = material.emissive.getHex();
+		           	this.specular = material.specular.getHex();
+		           	this.shininess = material.shininess;
+		            this.side = "front";
+		            this.color = material.color.getStyle();
+		        }
+
+ 	        	addControlGui(controles);
+
+				// Incluimos la salida del render al elemento html
+				document.body.appendChild(renderer.domElement);
+
+				// Llamamos a la funcion de visualizacion 
+				render();
+
+			}
+
+			/** 
+			 * Funcion que crea el menu en la parte superior derecha de la ventana
+			 * @param controlObject: objeto gui
+			 **/
+			function addControlGui(controles) {
+				var gui = new dat.GUI();
+
+				gui.add(controles, 'opacity', 0.1, 1).onChange(
+					function (e) {
+            			material.opacity = e
+        			}
+        		);
+		        gui.add(controles, 'visible').onChange(
+		        	function (e) {
+		            	material.visible = e
+		        	}
+		        );
+				gui.addColor(controles, 'specular').onChange(
+					function (e) {
+            			material.specular = new THREE.Color(e)
+        			}
+        		);
+        		gui.add(controles, 'shininess', 0, 200).onChange(
+        			function (e) {
+            			material.shininess = e
+        			}
+        		);
+		        gui.addColor(controles, 'emissive').onChange(
+		        	function (e) {
+		            	material.emissive = new THREE.Color(e)
+		        	}
+		        );
+		        gui.add(controles, 'side', ["front", "back", "double" ]).onChange(
+		        	function (e) {
+			            console.log(e);
+			            switch (e) {
+			                case "front":
+			                    material.side = THREE.FrontSide;
+			                    break;
+			                case "back":
+			                    material.side = THREE.BackSide;
+			                    break;
+			                case "double":
+			                    material.side = THREE.DoubleSide
+			                    break;
+			            }
+			            material.needsUpdate = true;
+			            //console.log(material);
+		        	}
+		        );
+		        gui.addColor(controles, 'color').onChange(
+		        	function (e) {
+		            	material.color.setStyle(e)
+		        	}
+		        );
+			}
+
+			/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+			function render() {
+
+				esfera.rotation.y += controles.rotationSpeed;
+
+				// render utilizando requestAnimationFrame
+				requestAnimationFrame(render);
+				renderer.render(scene, camera);
+			}
+
+	     	/**
+	     	 * Funcion que controla el tamano y asegura que la camara y el render
+		 	 * se adaptan en el instante correcto
+	     	 **/
+	    	function handleResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize(window.innerWidth, window.innerHeight);
+	    	}
+
+			// Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+
+    		// Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+    		window.addEventListener('resize', handleResize, false);
+
+		</script>
+	</body> 
+</html>

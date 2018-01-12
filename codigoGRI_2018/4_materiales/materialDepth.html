@@ -1,0 +1,159 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+		<meta charset=utf-8> 
+		<title> Material Depth </title> 
+		<style> 
+			body { margin: 0; } 
+			canvas { width: 100%; height: 100% } 
+		</style> 
+	</head> 
+
+	<body> 
+		<script src="../libs/three.min.js"></script> 
+		<script src="../libs/dat.gui.min.js"></script> 
+
+		<script>
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			var controles;
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+				// Creamos la escena que contiene todos los objetos, camaras y luces
+				scene = new THREE.Scene();
+        		scene.overrideMaterial = new THREE.MeshDepthMaterial();
+
+				// Creamos el objeto render que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+				// En la nueva version de Three.js hay que poner el canal alpha a cero (false)
+				renderer.setClearColor(0x000000);
+        		renderer.setSize(window.innerWidth, window.innerHeight);
+				renderer.shadowMap.enabled = true;
+				//renderer.shadowMap.type = THREE.PCFSoftShadowMap; // por defecto THREE.PCFShadowMap
+
+				// Creamos la camara
+				camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 10, 130);
+				// Posicionamos la camara en el centro de la escena
+		        camera.position.x = -50;
+        		camera.position.y = 40;
+        		camera.position.z = 50;
+        		camera.lookAt(scene.position);
+
+		        // Menu
+		       	controles = new function () {
+		            this.cameraNear = camera.near;
+		            this.cameraFar = camera.far;
+		            this.rotationSpeed = 0.02;
+		            this.numberOfObjects = scene.children.length;
+
+		            this.remove = function () {
+		                var allChildren = scene.children;
+		                var lastObject = allChildren[allChildren.length - 1];
+		                if (lastObject instanceof THREE.Mesh) {
+		                    scene.remove(lastObject);
+		                    this.numberOfObjects = scene.children.length;
+		                }
+		            }
+
+		            this.add = function () {
+		                var lado = Math.ceil(3 + (Math.random() * 3));
+		                var geometria = new THREE.BoxGeometry(lado, lado, lado);
+		                var material = new THREE.MeshLambertMaterial({color: Math.random() * 0xffffff });
+		                var cubo = new THREE.Mesh(geometria, material);
+		                cubo.castShadow = true;
+
+		                // position the cube randomly in the scene
+		                cubo.position.x = -60 + Math.round((Math.random() * 100));
+		                cubo.position.y = Math.round((Math.random() * 10));
+		                cubo.position.z = -100 + Math.round((Math.random() * 150));
+
+		                // add the cube to the scene
+		                scene.add(cubo);
+		                this.numberOfObjects = scene.children.length;
+		            };
+
+		            this.outputObjects = function () {
+		                console.log(scene.children);
+		            }
+        		}
+
+
+		        addControlGui(controles);
+
+				// Incluimos la salida del render al elemento html
+				document.body.appendChild(renderer.domElement);
+
+				// Llamamos a la funcion de visualizacion 
+				render();
+
+			}
+
+			/** 
+			 * Funcion que crea el menu en la parte superior derecha de la ventana
+			 * @param controlObject: objeto gui
+			 **/
+			function addControlGui(controles) {
+				var gui = new dat.GUI();
+
+				gui.add(controles, 'rotationSpeed', 0, 0.5);
+		        gui.add(controles, 'add');
+		        gui.add(controles, 'remove');
+		        gui.add(controles, 'cameraNear', 0, 50).onChange(
+		        	function (e) {
+		            	camera.near = e;
+		        	}
+		        );
+		        gui.add(controles, 'cameraFar', 50, 200).onChange(
+		        	function (e) {
+		            	camera.far = e;
+		        	}
+		        );
+			}
+
+			/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+			function render() {
+				// rotate the cubes around its axes
+            	scene.traverse(function (e) {
+		                if (e instanceof THREE.Mesh) {
+		                    e.rotation.x += controles.rotationSpeed;
+		                    e.rotation.y += controles.rotationSpeed;
+		                    e.rotation.z += controles.rotationSpeed;
+		                }
+            	});
+
+ 				// render utilizando requestAnimationFrame
+				requestAnimationFrame(render);
+				renderer.render(scene, camera);
+			}
+
+	     	/**
+	     	 * Funcion que controla el tamano y asegura que la camara y el render
+		 	 * se adaptan en el instante correcto
+	     	 **/
+	    	function handleResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize(window.innerWidth, window.innerHeight);
+	    	}
+
+			// Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+
+    		// Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+    		window.addEventListener('resize', handleResize, false);
+
+		</script>
+	</body> 
+</html>

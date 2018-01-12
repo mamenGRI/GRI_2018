@@ -1,0 +1,164 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+		<meta charset=utf-8> 
+		<title> Cubo con textura UV Mapping </title> 
+		<style> 
+			body { margin: 0; overflow: hidden; } 
+		</style> 
+	</head> 
+
+	<body> 
+		<div id="WebGL-output"> 
+        </div>
+
+		<script src="../libs/three.js"></script>
+		<script src="../libs/dat.gui.js"></script>
+		<script src="../libs/loaders/OBJLoader.js"></script>
+
+		<script>
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			var cubo;
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+				// Creamos la escena que contiene todos los objetos, camaras y luces
+				scene = new THREE.Scene();
+
+				// Creamos el objeto render que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+				// Inicializamos el color del fondo y el tamano
+				renderer.setClearColor(0xffffff);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				renderer.shadowMap.enabled = true;
+				renderer.shadowMap.type = THREE.PCFSoftShadowMap; // por defecto THREE.PCFShadowMap
+
+				// Creamos la camara
+				camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+				// Posicionamos la camara en el centro de la escena
+		        camera.position.x = -30;
+        		camera.position.y = 40;
+        		camera.position.z = 50;
+		        camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+		        // Foco
+		        var foco = new THREE.SpotLight(0xffffff);
+		        foco.position.set(-30, 60, 50);
+		        foco.intensity = 1.5;
+		        scene.add(foco);		       
+
+		        // Creamos un cubo
+		        creaCubo();
+
+				// Incluimos la salida del render al elemento html
+				document.getElementById("WebGL-output").appendChild(renderer.domElement);
+
+				// Llamamos a la funcion de visualizacion 
+				render();
+
+			}
+
+			function aplicaMapeoUV(geometria, i, mapa) {
+				geometria.faceVertexUvs[0][i] = [ mapa[0], mapa[1], mapa[3] ];
+				geometria.faceVertexUvs[0][i+1] = [ mapa[1], mapa[2], mapa[3] ];
+			}
+
+			function inicializaMapeoUV(geometria) {
+				var ladrillo = [
+					new THREE.Vector2(0, .666),
+					new THREE.Vector2(.5, .666),
+					new THREE.Vector2(.5, 1),
+					new THREE.Vector2(0, 1)
+				];
+
+  				var nubes = [
+  					new THREE.Vector2(.5, .666), 
+  					new THREE.Vector2(1, .666), 
+  					new THREE.Vector2(1, 1), 
+  					new THREE.Vector2(.5, 1)
+  				];
+  
+  				var caja = [
+  					new THREE.Vector2(0, .333), 
+  					new THREE.Vector2(.5, .333), 
+  					new THREE.Vector2(.5, .666), 
+  					new THREE.Vector2(0, .666)
+  				];
+  				
+  				var piedra = [
+  					new THREE.Vector2(.5, .333), 
+  					new THREE.Vector2(1, .333), 
+  					new THREE.Vector2(1, .666), 
+  					new THREE.Vector2(.5, .666)
+  				];
+  
+  				var agua = [
+  					new THREE.Vector2(0, 0), 
+  					new THREE.Vector2(.5, 0), 
+  					new THREE.Vector2(.5, .333), 
+  					new THREE.Vector2(0, .333)
+  				];
+
+  				var madera = [
+  					new THREE.Vector2(.5, 0), 
+  					new THREE.Vector2(1, 0), 
+  					new THREE.Vector2(1, .333), 
+  					new THREE.Vector2(.5, .333)
+  				];
+
+				geometria.faceVertexUvs[0] = [];
+				aplicaMapeoUV(geometria, 0, ladrillo);
+				aplicaMapeoUV(geometria, 2, nubes);
+				aplicaMapeoUV(geometria, 4, caja);				  
+				aplicaMapeoUV(geometria, 6, piedra);				  
+				aplicaMapeoUV(geometria, 8, agua);
+				aplicaMapeoUV(geometria, 10, madera);
+			}
+
+			/** 
+			 * Creamos un cubo y lo añadimos a la escena
+			 **/
+			function creaCubo() {
+				// material
+				var material = new THREE.MeshPhongMaterial();
+
+				var manager = new THREE.LoadingManager();
+			    var loader = new THREE.TextureLoader(manager);
+				material.map = loader.load("../texturas/uv/atlas_uv.jpg");
+
+				// geometria
+			    var geometria = new THREE.BoxGeometry( 10, 10, 10);
+
+			    inicializaMapeoUV(geometria);
+
+			    cubo = new THREE.Mesh(geometria, material);
+			    scene.add(cubo);
+			}
+
+			/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+			function render() {
+	            cubo.rotation.y += 0.006;
+	            cubo.rotation.x += 0.006;
+ 
+				// render utilizando requestAnimationFrame
+				requestAnimationFrame(render);
+				renderer.render(scene, camera);
+			}
+
+			// Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+		</script>
+	</body> 
+</html>

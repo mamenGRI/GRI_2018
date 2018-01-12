@@ -1,0 +1,209 @@
+<!DOCTYPE html> 
+<!-- 
+	http://stackoverflow.com/questions/5055625/image-warping-bulge-effect-algorithm 
+	http://paulbourke.net/miscellaneous/imagewarp/
+-->
+<html> 
+	<head> 
+		<meta charset=utf-8> 
+		<title> Distorsion de Imagen </title> 
+		<style> 
+			body { margin: 0; } 
+			canvas { width: 100%; height: 100% } 
+		</style> 
+	</head> 
+
+	<body>
+		<script src="../libs/three.min.js"></script> 
+		<script src="../libs/dat.gui.min.js"></script>
+		<script src="../libs/camara/OrbitControls.js"></script> 
+
+		<script type="x-shader/x-vertex" id="vertex-shader">
+			varying vec2 coordsUV;
+
+			void main() {    
+				coordsUV = uv;     
+				gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);  
+			}
+		</script>
+
+		<script type="x-shader/x-fragment" id="fragment-shader">
+		    const float PI = 3.1415926535;
+
+			uniform sampler2D textura;
+			// width, height
+			uniform vec2 uResolution;
+			uniform float time;
+			varying vec2 coordsUV;
+
+			void main() {
+				vec3 f_color;
+
+				//vec2 delta = vec2(0.0, 0.0); // sin(time)/2.0 // x = -.75, y = -0.5 // y = 1.0
+			    
+			    // Pasamos de coordenadas de la imagen (coordsUV) o (i, j) o (0, 1) a coordenadas cartesianas (x, y)
+			 	// definidas en [-1, 1]
+			  	vec2 coordsXY = 2.0 * (coordsUV.xy/uResolution.xy) - 1.0;
+
+			  	// Coordenadas de la imagen (i, j)
+			  	vec2 coordsIJ;
+
+				// Pasamos de coordenadas cartesianas (x, y) a coordenadas polares (r, phi)
+				float r = length(coordsXY);
+				float phi = atan(coordsXY.y, coordsXY.x);
+				    
+        		// warp
+				float fac = abs(sin(time))*2.0 + .125; // +1.5; // 2.0 + 1.5;
+				r = pow(r, fac);
+
+				// 1. r <- sqrt(r)
+				// 2. r <- 2*asin(r)/PI (map to sphere)
+				// 3. r <- sin(PI*r/2)
+				// 4. r <- pow(r, p) con p = 1.5
+				// 5. r <- pow(r, p) con p = 2
+				// 6. r <- pow(r, p) con p = 3
+				// 7. x <- sin(PI*x/2), y <- sin(PI*x/2)
+				// 8. x <- sign(x)*pow(x,2), y <- sign(y)*pow(y,2)
+				// 9. x <- 2*asin(x)/PI, y <- 2*asin(y)/PI
+				// 10. x <- x*(1-p*r)/(1-p), y <- y*(1-p*r)/(1-p) con p = 0.1
+				// 11. x <- x*(1-p*r)/(1-p), y <- y*(1-p*r)/(1-p) con p = 0.2
+				// 12. x <- x*(1-p*r)/(1-p), y <- y*(1-p*r)/(1-p) con p = 0.3
+				// 13. r <- p1*pow(10, r*p2)-p1 con p1 = 0.049 y p2 = 1.280
+				// 14. r <- p1*pow(r,3)+p2*pow(r,2)+p3 con p1 = 0.819, p2=0.046 y p3 = 0.152
+				// 15. phi <- phi + p con p = 0.5 (rotacion)
+
+        		// Otros warp:
+				// float fac = PI*.5; //mod(time, 1.0) * PI; // sin(time) * PI; // 1.0 / mod(time, 10.0) * PI;
+				// r = sin(fac*r); // PI*r; // PI*.5*r;
+
+				// Pasamos de coordenadas polares a coordenadas de la imagen
+				coordsIJ.x = r * cos(phi) + 0.5;
+				coordsIJ.y = r * sin(phi) + 0.5;
+				//coordsIJ = coordsIJ + delta;
+
+        		if (coordsIJ.x < 0.0) {
+        			coordsIJ.x = coordsUV.x;
+        		}
+        		if (coordsIJ.y < 0.0) {
+        			coordsIJ.y = coordsUV.y;
+        		}
+
+   				gl_FragColor = texture2D( textura, coordsIJ );
+ 			}
+		</script>	
+
+		<script>
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			var orbit;
+			var miReloj;
+
+			var uniformes;
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+
+				// Creamos un reloj
+                miReloj = new THREE.Clock();
+
+				// Creamos la escena que contiene todos los objetos, camaras y luces
+				scene = new THREE.Scene();
+
+				// Creamos el objeto render que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+    			renderer.setClearColor(0xccccff);
+				renderer.antialias = false;
+				renderer.setSize(window.innerWidth, window.innerHeight);
+ 
+				// Creamos la camara
+				camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
+			    camera.position.set(0, 0, 800);
+			    camera.lookAt(scene.position);
+
+			    // Creamos los controles Orbit
+                orbit = new THREE.OrbitControls(camera);
+                orbit.autoRotate = true;
+
+                // Variables uniformes: textura, resolucion, time
+                uniformes = {
+                	textura: { type: "t", value: creaTextura("../texturas/general/", "bathroom.jpg" ) },
+                	uResolution: {type: "v2", value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+                	time: {type: "f", value: 0 }
+                }
+
+	            // Plano
+	            var material = new THREE.ShaderMaterial({
+	            	uniforms: uniformes,
+	            	side: THREE.DoubleSide,
+			        vertexShader: document.getElementById('vertex-shader').textContent,
+			        fragmentShader: document.getElementById('fragment-shader').textContent
+			    });
+
+			    var geometria = new THREE.PlaneGeometry(500, 500, 10, 10);
+			    var plano = new THREE.Mesh(geometria, material);
+			    scene.add(plano);
+
+				// Incluimos la salida del render al elemento html
+				document.body.appendChild(renderer.domElement);
+
+				// Llamamos a la funcion de visualizacion 
+				render();
+
+			}
+
+			/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+			function render() {
+				// Adaptamos el reloj
+                var delta = miReloj.getDelta();
+                // Adaptamos los controles trackball
+                orbit.update(delta);
+ 
+                // render utilizando requestAnimationFrame
+                requestAnimationFrame(render);
+
+                uniformes.time.value += delta;
+
+                renderer.render(scene, camera);
+			}
+
+			/** 
+			 * Creamos una textura
+			 * @param path: ruta donde se encuentra la imagen de textura
+			 * @param imagen: nombre de la imagen (textura) (con extension)
+			 **/
+			function creaTextura(path, imagen) {
+				var loader = new THREE.TextureLoader();
+				var textura = loader.load(path + imagen);
+				return textura;
+			}
+
+	     	/**
+	     	 * Funcion que controla el tamano y asegura que la camara y el render
+		 	 * se adaptan en el instante correcto
+	     	 **/
+	    	function handleResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+			    camera.updateProjectionMatrix();
+			    renderer.setSize(window.innerWidth, window.innerHeight);
+	    	}
+
+			// Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+
+    		// Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+    		window.addEventListener('resize', handleResize, false);
+
+		</script>
+	</body> 
+</html>

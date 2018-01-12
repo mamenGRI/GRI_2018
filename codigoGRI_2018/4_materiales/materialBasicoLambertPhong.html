@@ -1,0 +1,123 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+		<meta charset=utf-8> 
+		<title> Comparacion entre materiales: Basic, Lambert y Phong </title> 
+		<style> 
+			body { margin: 0; } 
+			canvas { width: 100%; height: 100% } 
+		</style> 
+	</head> 
+
+	<body> 
+		<script src="../libs/three.min.js"></script> 
+		<script src="../libs/dat.gui.min.js"></script> 
+
+		<script>
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			var cubos;
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+				// Creamos la escena que contiene todos los objetos, camaras y luces
+				scene = new THREE.Scene();
+
+				// Creamos el objeto render que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+
+				// Inicializamos el color del fondo y el tamano
+				renderer.setClearColor(0x3F3F3F);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				renderer.shadowMap.enabled = true;
+				renderer.shadowMap.type = THREE.PCFSoftShadowMap; // por defecto THREE.PCFShadowMap
+ 
+				// Creamos la camara
+				camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 10000);
+				camera.position.set(0, 0, 700);
+				scene.add( camera );
+
+		        // Luz
+		       	luz = new THREE.DirectionalLight(0xffffff, 1);
+				luz.position.set( 0, 250, 700 );
+				scene.add( luz );
+
+				// Estructura jerarquica: cubos --> cubo1, cubo2, cubo3
+		        cubos = new THREE.Object3D();
+		        // material del cubo 1
+		        var material = new THREE.MeshBasicMaterial({color:0x00ff00 });
+		        var cubo1 = creaCubo(material, -300);
+		        cubos.add(cubo1);
+		        var material = new THREE.MeshLambertMaterial({color:0x00ff00 });
+		        var cubo2 = creaCubo(material, 0);
+		        cubos.add(cubo2);
+		        var material = new THREE.MeshPhongMaterial({color: 0x00ff00, specular: 0xeeeeee, shininess: 50});
+		        var cubo3 = creaCubo(material, 300);
+		        cubos.add(cubo3);
+
+		        scene.add(cubos);
+
+				// Incluimos la salida del render al elemento html
+				document.body.appendChild(renderer.domElement);
+
+				// Llamamos a la funcion de visualizacion 
+				render();
+
+			}
+
+			/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+			function render() {
+				// render utilizando requestAnimationFrame
+				requestAnimationFrame(render);
+
+				// Rotamos los cubos por separado
+				for(var i=0;i<3;i++){
+					cubos.children[i].rotation.x += .01;
+					cubos.children[i].rotation.y += .01;
+				}
+
+				renderer.render(scene, camera);
+			}
+
+			/**
+			 * Crea un cubo
+			 * @param material:
+			 * @param x:
+			 **/
+			function creaCubo(material, x){
+				var geometria = new THREE.BoxGeometry(150,150,150);
+				var cubo = new THREE.Mesh(geometria, material);
+				cubo.position.x = x;
+				return(cubo);
+			}
+
+	     	/**
+	     	 * Funcion que controla el tamano y asegura que la camara y el render
+		 	 * se adaptan en el instante correcto
+	     	 **/
+	    	function handleResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize(window.innerWidth, window.innerHeight);
+	    	}
+
+			// Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+
+    		// Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+    		window.addEventListener('resize', handleResize, false);
+
+		</script>
+	</body> 
+</html>

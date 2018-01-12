@@ -1,0 +1,104 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+		<meta charset=utf-8> 
+		<title> Triangulo 2D </title> 
+		<style> 
+			body { margin: 0; } 
+			canvas { width: 100%; height: 100% } 
+		</style> 
+	</head> 
+
+	<body> 
+		<script src="../libs/three.js"></script> 
+
+		<script>
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+				// Creamos la escena que contiene todos los objetos, camaras y luces
+				scene = new THREE.Scene();
+
+				// Creamos el Objeto render que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+				// Inicializamos el color del fondo y el tamano
+				renderer.setSize(window.innerWidth, window.innerHeight);
+
+				// Creamos la camara
+				camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 1000);
+				// Posicionamos la camara en el centro de la escena
+				camera.position.z = 500;
+
+				// Creamos la geometria del triangulo
+				var geometria = creaTriangulo();
+				// Material
+				var material = new THREE.MeshBasicMaterial({color: 0xff0000});
+				// Triangulo
+				var triangulo = new THREE.Mesh(geometria, material);
+				// Incluimos el triangulo en la escena
+				scene.add(triangulo)   
+
+				// Incluimos la salida del render al elemento html
+				document.body.appendChild(renderer.domElement);
+
+				// Llamamos a la funcion de visualizacion 
+				render();
+			}
+
+			/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+			function render() {
+				// render utilizando requestAnimationFrame
+				requestAnimationFrame(render);
+				renderer.render(scene, camera);
+			}
+
+			/**
+			 * Funcion auxiliar que crea un triangulo
+			 * @return: geometria del triangulo
+			 **/
+			function creaTriangulo(){
+				var geometria = new THREE.Geometry();
+				// vertices
+				var v1 = new THREE.Vector3(100,0,0);
+				var v2 = new THREE.Vector3(-100,0,0);
+				var v3 = new THREE.Vector3(0,100,0);
+				// Anadimos la nueva geometria en funcion de los vertices generados
+				geometria.vertices.push(v1);
+				geometria.vertices.push(v2);
+				geometria.vertices.push(v3);
+				// Creamos la cara
+				geometria.faces.push(new THREE.Face3(0, 2, 1));
+		
+				return geometria;
+			}
+
+	     	/**
+	     	 * Funcion que controla el tamano y asegura que la camara y el render
+		 	 * se adaptan en el instante correcto
+	     	 **/
+	    	function handleResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize(window.innerWidth, window.innerHeight);
+	    	}
+
+			// Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+
+    		// Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+    		window.addEventListener('resize', handleResize, false);
+		</script>
+	</body> 
+</html>

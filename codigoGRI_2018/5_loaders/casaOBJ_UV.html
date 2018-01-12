@@ -1,0 +1,185 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+		<meta charset=utf-8> 
+		<title> Casita a partir de un fichero OBJ con UV-mapping </title> 
+		<style> 
+			body { margin: 0; } 
+			canvas { width: 100%; height: 100% } 
+		</style> 
+	</head> 
+
+	<body>
+		<script src="../libs/three.js"></script>
+		<script src="../libs/camara/OrbitControls.js"></script>
+		<script src="../libs/loaders/DDSLoader.js"></script>
+		<script src="../libs/loaders/MTLLoader.js"></script>
+		<script src="../libs/loaders/OBJLoader.js"></script>
+
+		<script>
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			var orbit;
+
+			var miReloj;
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+				// Creamos un reloj
+                miReloj = new THREE.Clock();
+
+				// Creamos la escena que contiene todos los objetos, camaras y luces
+				scene = new THREE.Scene();
+
+				// Creamos un Objeto Three.js (render) que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+				// Inicializamos el color del fondo y el tamano
+				renderer.setClearColor(0xEEEEEE);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				renderer.shadowMap.enabled = true;
+				renderer.shadowMap.type = THREE.PCFSoftShadowMap; // por defecto THREE.PCFShadowMap
+
+				// Camara
+		        camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 2000 );
+		        camera.position.y = 10;
+		        camera.position.z = 20;
+
+		        // Controles de la camara (rotacion automatica)
+		        orbit = new THREE.OrbitControls(camera);
+                orbit.autoRotate = true;
+
+                // Luz ambiental
+		        var ambiental = new THREE.AmbientLight( 0x444444 );
+				scene.add( ambiental );
+
+				// Luz direccional
+				var luz = new THREE.DirectionalLight( 0xffeedd );
+				luz.intensity = 0.6;
+				luz.position.set( 0, 0, 1 ).normalize();
+				scene.add( luz );
+
+			    // Carga del modelo y de las texturas
+				var manager = new THREE.LoadingManager();
+
+				manager.onProgress = function ( item, loaded, total ) {
+					console.log( item, loaded, total );
+				};
+
+				// Carga de la textura
+				var textura = cargaTextura(manager, '../obj/casita3/housemap.jpg');
+				
+				// Carga del objeto
+				cargaObjeto(manager, "casita", '../obj/casita3/house01.obj', textura);
+
+				// Incluimos unos ejes globales en la escena
+				var ejes = new THREE.AxesHelper( 100 );
+				scene.add(ejes);
+
+				// Incluimos la salida del render al elemento html
+				document.body.appendChild(renderer.domElement);
+
+				// Llamamos a la funcion de visualizacion 
+				render();
+			}
+
+			/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+			function render() {
+			    var delta = miReloj.getDelta();
+
+                // Adaptamos los controles trackball
+                orbit.update(delta);
+
+                // render utilizando requestAnimationFrame
+                requestAnimationFrame(render);
+                renderer.render(scene, camera);
+			}
+
+			/**
+			 * Funcion que carga la textura
+			 * @param manager: Manager
+			 * @param nombre_textura: Nombre de la textura a cargar (path completo)
+			 **/
+			function cargaTextura(manager, nombre_textura) {
+				var textura = new THREE.Texture();
+
+				var loader = new THREE.ImageLoader( manager );
+				loader.load(nombre_textura, 
+					function ( image ) {
+						textura.image = image;
+						textura.needsUpdate = true;
+					}
+				);
+
+				return textura;
+			}
+
+			/**
+			 * Funcion para aplicar las texturas del objeto que se va a insertar en la escena
+			 * @param objeto: objeto
+			 * @param textura: texturas del objeto
+			 **/
+			function aplicaTexturas(objeto, textura) {
+				objeto.traverse( function ( child ) {
+					if ( child instanceof THREE.Mesh ) {
+						child.material.map = textura;
+					}
+				} );
+			}
+
+			/**
+			 * Funcion que carga el objeto
+			 * @param manager: Manager
+			 * @param alias: Nombre que le vamos a dar al objeto
+			 * @param nombre_objeto: Nombre del objeto a cargar (path completo)
+			 * @param textura: Textura del objeto
+			 **/
+			function cargaObjeto(manager, alias, nombre_objeto, textura) {
+				var onProgress = function ( xhr ) {
+					if ( xhr.lengthComputable ) {
+						var percentComplete = xhr.loaded / xhr.total * 100;
+						console.log( Math.round(percentComplete, 2) + '% downloaded' );
+					}
+				};
+				var onError = function ( xhr ) {};
+
+				var loader = new THREE.OBJLoader( manager );
+				loader.load(nombre_objeto, 
+					function ( object ) {
+						aplicaTexturas(object, textura);
+						object.name = alias;
+						object.position.y = 0;
+						scene.add( object );
+					}, 
+					onProgress, onError
+				);
+			}
+
+	     	/**
+	     	 * Funcion que controla el tamano y asegura que la camara y el render
+		 	 * se adaptan en el instante correcto
+	     	 **/
+	    	function handleResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+			    camera.updateProjectionMatrix();
+			    renderer.setSize(window.innerWidth, window.innerHeight);
+	    	}
+
+			// Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+
+    		// Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+    		window.addEventListener('resize', handleResize, false);
+		</script>
+	</body> 
+</html>

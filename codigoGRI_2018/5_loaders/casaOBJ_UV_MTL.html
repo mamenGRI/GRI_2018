@@ -1,0 +1,164 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+		<meta charset=utf-8> 
+		<title> Casa a partir de un fichero OBJ y MTL con UV-mapping </title> 
+		<style> 
+			body { margin: 0; } 
+			canvas { width: 100%; height: 100% } 
+		</style> 
+	</head> 
+
+	<body>
+		<script src="../libs/three.js"></script>
+		<script src="../libs/camara/OrbitControls.js"></script>
+		<script src="../libs/loaders/DDSLoader.js"></script>
+		<script src="../libs/loaders/MTLLoader.js"></script>
+		<script src="../libs/loaders/OBJLoader.js"></script>
+
+		<script>
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			var orbit;
+
+			var miReloj;
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+				// Creamos un reloj
+                miReloj = new THREE.Clock();
+
+				// Creamos la escena que contiene todos los objetos, camaras y luces
+				scene = new THREE.Scene();
+
+				// Creamos un Objeto Three.js (render) que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+				// Inicializamos el color del fondo y el tamano
+				renderer.setClearColor(new THREE.Color(0xEEEEEE));
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				renderer.shadowMap.enabled = true;
+				renderer.shadowMap.type = THREE.PCFSoftShadowMap; // por defecto THREE.PCFShadowMap
+
+				// Camara
+		        camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 2000 );
+		        camera.position.y = 10;
+		        camera.position.z = 20;
+
+		        // Controles de la camara (rotacion automatica)
+		        orbit = new THREE.OrbitControls(camera);
+                orbit.autoRotate = true;
+
+                // Luz ambiental
+		        var ambient = new THREE.AmbientLight( 0x444444 );
+				scene.add( ambient );
+
+				// Luz direccional
+				var luz = new THREE.DirectionalLight( 0xffeedd );
+				luz.position.set( 0, 0, 1 ).normalize();
+				scene.add( luz );
+
+			    // Carga del modelo y de las texturas
+				var manager = new THREE.LoadingManager();
+
+				manager.onProgress = function ( item, loaded, total ) {
+					console.log( item, loaded, total );
+				};
+				
+				cargaObjetoConTextura(manager, "casita", "../obj/casita3/", 'house01.mtl', "../obj/casita3/", 'house01.obj');
+
+				// Incluimos unos ejes globales en la escena
+				var ejes = new THREE.AxisHelper( 100 );
+				scene.add(ejes);
+
+				// Incluimos la salida del render al elemento html
+				document.body.appendChild(renderer.domElement);
+
+				// Llamamos a la funcion de visualizacion 
+				render();
+			}
+
+			/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+			function render() {
+			    var delta = miReloj.getDelta();
+
+                // Adaptamos los controles trackball
+                orbit.update(delta);
+
+                camera.lookAt (scene.position);
+
+                // render utilizando requestAnimationFrame
+                requestAnimationFrame(render);
+                renderer.render(scene, camera);
+			}
+
+			/**
+			 * Funcion que carga un objeto (.obj) que incluye un fichero .mtl
+			 * @param manager: Manager
+			 * @param alias: Nombre que le vamos a dar al objeto
+			 * @param path_mtl: Path donde se encuentra el fichero .mtl
+			 * @param nombre_mtl: Nombre del fichero .mtl
+			 * @param path_objeto: Path donde se encuentra el objeto (.obj)
+			 * @param nombre_objeto: Nombre del fichero donde se encuentra el objeto
+			 **/
+			function cargaObjetoConTextura(manager, alias, path_mtl, nombre_mtl, path_objeto, nombre_objeto) {
+				var onProgress = function ( xhr ) {
+					if ( xhr.lengthComputable ) {
+						var percentComplete = xhr.loaded / xhr.total * 100;
+						console.log( Math.round(percentComplete, 2) + '% downloaded' );
+					}
+				};
+
+				var onError = function ( xhr ) {};
+
+				THREE.Loader.Handlers.add( /\.dds$/i, new THREE.DDSLoader() );
+
+				var loader = new THREE.MTLLoader( manager );
+
+				loader.setPath(path_mtl);
+				loader.load( nombre_mtl, 
+					function( materials ) {
+						materials.preload();
+						var objLoader = new THREE.OBJLoader( manager );
+						objLoader.setMaterials( materials );
+						objLoader.setPath( path_objeto );
+						objLoader.load( nombre_objeto, 
+							function ( object ) {
+								object.position.y = 0;
+								object.name = alias;
+								scene.add( object );
+							}, 
+							onProgress, onError 
+						);
+					}
+				);
+			}
+
+	     	/**
+	     	 * Funcion que controla el tamano y asegura que la camara y el render
+		 	 * se adaptan en el instante correcto
+	     	 **/
+	    	function handleResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+			    camera.updateProjectionMatrix();
+			    renderer.setSize(window.innerWidth, window.innerHeight);
+	    	}
+
+			// Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+
+    		// Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+    		window.addEventListener('resize', handleResize, false);
+		</script>
+	</body> 
+</html>

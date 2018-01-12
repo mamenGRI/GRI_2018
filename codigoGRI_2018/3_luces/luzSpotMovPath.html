@@ -1,0 +1,206 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+		<meta charset=utf-8> 
+		<title> Luz spot en movimiento a lo largo de una spline </title> 
+		<style> 
+			body { margin: 0; } 
+			canvas { width: 100%; height: 100% } 
+		</style> 
+	</head> 
+
+	<body> 
+		<script src="../libs/three.js"></script>
+		<script src="../libs/dat.gui.min.js"></script>
+		<script src="../libs/camara/OrbitControls.js"></script>
+
+		<script>
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			var orbit;
+
+			var colorAmbiental = "#1c1c1c";
+			var colorSpot = "#ffffff";
+
+			var luzAmbiental;
+			var luzSpot;
+
+			var esferaLuz;
+
+			var u = 0;
+
+			var curvaAnimacion;
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+				// Creamos la escena que contiene todos los objetos, camaras y luces
+				scene = new THREE.Scene();
+
+				// Creamos un Objeto Three.js (render) que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+				// Inicializamos el color del fondo y el tamano
+				renderer.setClearColor(new THREE.Color(0xEEEEEE, 1.0));
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				renderer.shadowMapEnabled = true;
+ 
+				// Camara
+		        camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.1, 1000 );
+		        camera.position.set(-25, 30, 25);
+		        camera.lookAt(new THREE.Vector3(10, 0, 0));
+
+		        orbit = new THREE.OrbitControls(camera);
+
+				// PLANO
+		        var plano = new THREE.Mesh(new THREE.PlaneGeometry(60, 20, 1, 1), 
+		        							new THREE.MeshLambertMaterial({color: 0xffffff}));
+		        plano.rotation.x = -0.5 * Math.PI;
+		        plano.position.set(15, 0, 0);
+		        plano.receiveShadow  = true;
+      			scene.add(plano);
+
+		        // CUBO
+		        var cubo = new THREE.Mesh(new THREE.CubeGeometry(4, 4, 4), 
+		        							new THREE.MeshLambertMaterial({color: 0xff7777}));
+		        cubo.position.set(-4, 3, 0);
+		        cubo.castShadow = true;
+        		scene.add(cubo);
+
+        		// ESFERA
+		        var esfera = new THREE.Mesh(new THREE.SphereGeometry(4, 20, 20), 
+		        								new THREE.MeshLambertMaterial({color: 0x7777ff}));
+		        esfera.position.set (20, 0, 2);
+		        esfera.castShadow = true;
+		        scene.add(esfera);
+
+		        // LUZ AMBIENTAL
+		        luzAmbiental = new THREE.AmbientLight(colorAmbiental);
+		        scene.add(luzAmbiental);
+
+		        // Damos un poco mas de luz a la escena
+		        var luz = new THREE.SpotLight(0xcccccc);
+			    luz.position.set(-40, 60, -10);
+			    luz.intensity = 0.2;
+			    luz.lookAt(plano);
+			    scene.add(luz);
+
+		        // LUZ SPOT
+			    luzSpot = new THREE.SpotLight(colorSpot);
+			    luzSpot.position.set(-40, 60, -10);
+			    luzSpot.castShadow = true;
+			    luzSpot.onlyShadow = false;
+			    luzSpot.shadow.camera.near = 2;
+			    luzSpot.shadow.camera.far = 200;
+			    luzSpot.shadow.camera.fov = 130;
+			    luzSpot.target = plano;
+			    luzSpot.distance = 0;
+			    luzSpot.shadow.camera.visible = true;
+    			scene.add(luzSpot);
+
+		        // Incluimos una esfera para simular la luz posicional
+		        esferaLuz = new THREE.Mesh(new THREE.SphereGeometry(0.2), 
+		        							new THREE.MeshBasicMaterial({color: 0xac6c25}));
+		        esferaLuz.position = new THREE.Vector3(3, 20, 3);
+		        esferaLuz.castShadow = true;
+		        scene.add(esferaLuz);
+
+		        // Creamos la curva spline sobre la que se movera la luz spot
+		        creaSpline();
+
+				// Incluimos la salida del render al elemento html
+				document.body.appendChild(renderer.domElement);
+
+		        // Llamamos a la funcion de visualizacion 
+				render();
+
+			}
+
+			function creaSpline () {
+				var material = new THREE.LineBasicMaterial({
+		            color: 0xff00f0
+		        });
+
+				curvaAnimacion = new THREE.SplineCurve3([
+		            new THREE.Vector3(0, 10, 0),
+		            new THREE.Vector3(-10, 8, -5),
+		            new THREE.Vector3(-20, 10, -10),
+		            new THREE.Vector3(-10, 8, -15),
+		            new THREE.Vector3(0, 10, -20),
+		            new THREE.Vector3(10, 8, -15),
+		            new THREE.Vector3(20, 10, -10),
+		            new THREE.Vector3(10, 8, -5),
+		            new THREE.Vector3(0, 10, 0),
+		            new THREE.Vector3(-10, 8, 5),
+		            new THREE.Vector3(-20, 10, 10),
+		            new THREE.Vector3(-10, 8, 15),
+		            new THREE.Vector3(0, 10, 20),
+		            new THREE.Vector3(10, 8, 15),
+		            new THREE.Vector3(20, 10, 10),
+		            new THREE.Vector3(10, 8, 5),
+		            new THREE.Vector3(0, 10, 0)
+		        ]);
+
+		        var geometria = new THREE.Geometry();
+		        geometria.vertices = curvaAnimacion.getPoints(100);
+
+		        var curva = new THREE.Line(geometria, material);
+		        scene.add(curva);
+		    }
+
+		    /**
+		     * Funcion a partir de la cual obtenemos el valor de la nueva posicion en la curva 
+		     * spline segun el parametro u (entre 0 y 1).
+		     * Cada vez que avanzamos a lo largo de la curva, aumentamos el 
+		     * valor del parametro (u)
+		     **/
+        	function avanzaEnSpline() {
+		        if (u <= 1) {
+		        	// Obtenemos la nueva posicion a partir del valor del parametro
+		        	var nuevaPosicion = curvaAnimacion.getPoint(u);
+		        	// Ponemos en dicha posicion la esfera y la luz
+		        	esferaLuz.position.copy(nuevaPosicion);
+		            luzSpot.position.copy(nuevaPosicion);
+		            u += 0.001
+		        } else {
+		            u = 0;
+		        }
+        	}
+
+			/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+			function render() {
+				renderer.render(scene, camera);
+				avanzaEnSpline();
+				orbit.update();
+				// render utilizando requestAnimationFrame
+				requestAnimationFrame(render);
+			}
+
+	     	/**
+	     	 * Funcion que controla el tamano y asegura que la camara y el render
+		 	 * se adaptan en el instante correcto
+	     	 **/
+	    	function handleResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize(window.innerWidth, window.innerHeight);
+	    	}
+
+			// Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+
+    		// Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+    		window.addEventListener('resize', handleResize, false);
+
+		</script>
+	</body> 
+</html>

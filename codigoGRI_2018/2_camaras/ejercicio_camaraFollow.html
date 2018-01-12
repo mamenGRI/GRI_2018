@@ -1,0 +1,155 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+		<meta charset=utf-8> 
+		<title> Ejercicio: Camara siguiendo a un objeto </title> 
+		<style> 
+			body { margin: 0; } 
+			canvas { width: 100%; height: 100% } 
+		</style> 
+	</head> 
+
+	<body> 
+		<script src="../libs/three.js"></script>
+		<script src="../libs/dat.gui.js"></script>
+
+		<script>
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			var step;
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+				// Creamos la escena que contiene todos los objetos, camaras y luces
+				scene = new THREE.Scene();
+
+				// Creamos el objeto render que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+				// Inicializamos el color del fondo y el tamano
+				renderer.setClearColor(0xEEEEEE);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				renderer.shadowMap.enabled = true;
+				renderer.shadowMap.type = THREE.PCFSoftShadowMap; // por defecto THREE.PCFShadowMap
+
+				// Creamos la camara con proyeccion perspectiva
+				camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+				// @TODO: Posicionamos la camara en el punto (15, 6, 15) y la enfocamos hacia el centro de la escena
+				// ...
+
+				// Incluimos una luz de tipo spot
+				var foco = new THREE.SpotLight();
+		        foco.position.set(0, 60, 30);
+		        foco.castShadow = true;
+		        scene.add(foco);
+
+		        // Creacion de la escena que consta de un plano (suelo), un paralelepipedo y una esfera
+        		creaSuelo();
+        		creaParalelepipedo();
+        		creaEsfera();
+
+        		step = 0;
+
+				// Incluimos la salida del render al elemento html
+				document.body.appendChild(renderer.domElement);
+
+		        // Llamamos a la funcion de visualizacion 
+				render();
+			}
+			
+			/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+			function render() {
+		        renderer.render(scene, camera);
+
+		        // @TODO: Buscamos el objeto llamado "esfera" en la escena (funcion: getObjectByName)
+		        // ...
+
+		        // @TODO: Aumentamos el valor de la variable step en 0.02 unidades
+				// Calculamos el nuevo valor de la posicion de la esfera:
+				//		x = 0 + (10 * cos(step))
+				//		y = 0.75 * pi / 2 + (6 * abs(sin(step)))
+				// Asignamos esos valores a las coordenadas x e y del objeto al que se mira
+				// Hacemos que la camara mire a la posicion en la que se encuentra situado el objeto
+		        // ...
+
+		        requestAnimationFrame(render);
+			}
+
+			/** 
+			 * Funcion auxiliar que crea el suelo de la escena
+			 **/
+			function creaSuelo() {
+		        var geometria = new THREE.PlaneGeometry(100, 100, 20, 20);
+		        var material = new THREE.MeshPhongMaterial();
+		        // Suelo (plano)
+		        var suelo = new THREE.Mesh(geometria, material);
+		        suelo.receiveShadow = true;
+		        suelo.rotation.x = -0.5 * Math.PI;
+		        scene.add(suelo);
+		    }
+
+		    /** 
+			 * Funcion auxiliar que crea un paralelepípedo y lo coloca en la escena
+			 **/
+		    function creaParalelepipedo() {
+		        var geometria = new THREE.BoxGeometry(2.5, 4.5, 10);
+		        var material = new THREE.MeshLambertMaterial({color: 0xff0000});
+		        // Paralelepipedo
+		        var cubo = new THREE.Mesh(geometria, material);
+		        cubo.castShadow = true;
+		        cubo.receiveShadow = true;
+		        cubo.position.z = -5;
+		        scene.add(cubo);
+		    }
+
+		    /** 
+			 * Funcion auxiliar que crea una esfera
+			 * @return: objeto esfera creado
+			 **/
+		    function creaEsfera() {
+		        var geometria = new THREE.SphereGeometry(1.5, 20, 20);
+		        // Propiedades del material
+		        var matProps = {
+		            specular: '#a9fcff',
+		            color: '#00abb1',
+		            emissive: '#006063',
+		            shininess: 10
+		        }
+		        var material = new THREE.MeshPhongMaterial(matProps);
+		        // Esfera
+		        var esfera = new THREE.Mesh(geometria, material);
+		        esfera.name = "esfera";
+		        esfera.castShadow = true;
+		        esfera.position.y = 0.75 * Math.PI / 2;
+		        scene.add(esfera);
+		    }
+
+	     	/**
+	     	 * Funcion que controla el tamano y asegura que la camara y el render
+		 	 * se adaptan en el instante correcto
+	     	 **/
+	    	function handleResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize(window.innerWidth, window.innerHeight);
+	    	}
+
+			// Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+
+    		// Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+    		window.addEventListener('resize', handleResize, false);
+		</script>
+	</body> 
+</html>

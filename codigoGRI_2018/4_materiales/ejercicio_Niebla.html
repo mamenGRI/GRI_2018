@@ -1,0 +1,132 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+		<meta charset=utf-8> 
+		<title> Niebla </title> 
+		<style> 
+			body { margin: 0; } 
+			canvas { width: 100%; height: 100% } 
+		</style> 
+	</head> 
+
+	<body> 
+		<script src="../libs/three.min.js"></script> 
+		<script src="../libs/dat.gui.min.js"></script> 
+
+		<script>
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			var cubos;
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+				// Creamos la escena que contiene todos los objetos, camaras y luces
+				scene = new THREE.Scene();
+
+				// Creamos el objeto render que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+
+				// Inicializamos el color del fondo y el tamano
+				renderer.setClearColor(0x3F3F3F);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				renderer.shadowMap.enabled = true;
+				renderer.shadowMap.type = THREE.PCFSoftShadowMap; // por defecto THREE.PCFShadowMap
+
+				// @TODO: Incluimos niebla en la escena (color == 0x3f3f3f)
+				// 500 (minima distancia entre la camara y objeto donde comienza la niebla)
+				// Cualquier objeto que se encuentre a mas de 950 pixeles, sera invisible (complementamente gris)
+				// 
+				// < 500px = no fog
+				// > 500px = fog
+				// > 950px = invisible
+				// ...
+ 
+				// Creamos la camara
+				camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 10000);
+				camera.position.set(0, 250, 700);
+				camera.lookAt(new THREE.Vector3(0,0,0));
+				scene.add( camera );
+
+		        // Luz
+		       	luz = new THREE.DirectionalLight(0xffffff, 1);
+				luz.position.set( 0, 500, 100 );
+				scene.add( luz );
+
+				// Estructura jerarquica: cubos --> cubo1, cubo2, cubo3
+		        cubos = creaCubos();
+		        scene.add(cubos);
+
+				// Incluimos la salida del render al elemento html
+				document.body.appendChild(renderer.domElement);
+
+				// Llamamos a la funcion de visualizacion 
+				render();
+
+			}
+
+			/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+			function render() {
+				// render utilizando requestAnimationFrame
+				requestAnimationFrame(render);
+
+				// Rotamos los cubos por separado
+				for(var i=0;i<70;i++) {
+					var cubo = cubos.children[i];
+					// Movemos el cubo
+					cubo.position.z = Math.sin(cubo.random/70)*500;
+					// Incrementamos la posicion inicial del cubo
+					cubo.random += cubo.speed;
+				}
+				renderer.render(scene, camera);
+			}
+
+			/**
+			 * Crea 70 cubos
+			 **/
+			function creaCubos(){
+				var cubos = new THREE.Object3D();
+				var material = new THREE.MeshLambertMaterial({color:0x00ff00 });
+				var geometria = new THREE.BoxGeometry(50,50,50);
+				for (var i=0;i < 70; i++) {
+					var cubo = new THREE.Mesh(geometria, material);
+					cubo.position.x = (Math.random()-.5)*window.innerWidth;
+					cubo.position.y = (Math.random()-.5)*window.innerHeight;
+					// Creamos una variable aleatoria a fin de que cada cubo se mueva de forma "aleatoria"
+					cubo.random = parseInt((Math.random()-.5)*500);
+					// Velocidad aleatoria de cada cubo
+					cubo.speed = Math.random()+.1;
+					cubos.add(cubo);
+				}
+				return(cubos);
+			}
+
+	     	/**
+	     	 * Funcion que controla el tamano y asegura que la camara y el render
+		 	 * se adaptan en el instante correcto
+	     	 **/
+	    	function handleResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize(window.innerWidth, window.innerHeight);
+	    	}
+
+			// Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+
+    		// Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+    		window.addEventListener('resize', handleResize, false);
+
+		</script>
+	</body> 
+</html>

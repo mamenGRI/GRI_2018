@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html>
+	<head> 
+		<meta charset=utf-8> 
+		<title> Planeta Tierra (con volcanes) </title> 
+		<style> 
+			body { margin: 0; } 
+			canvas { width: 100%; height: 100% } 
+		</style> 
+	</head> 
+	<body>
+		<div id="WebGL-output"></div>
+
+		<script src="../libs/three.js"></script>
+		<script src="../libs/dat.gui.js"></script>
+		<script src="../libs/camara/OrbitControls.js"></script>
+		<script src="../libs/external/jquery-1.7.2.min.js"></script>
+
+		<script>
+		    // global variables
+		    var renderer;
+		    var scene;
+		    var camera;
+
+		    var controles;
+		    var orbit;
+
+		    var tierra;
+		    var nubes;
+		    var espacio;
+
+		    var miReloj;
+
+		    var pines;
+
+		    /**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+		    function init() {
+		    	// Incluir un reloj
+			    miReloj = new THREE.Clock();
+
+		        // Creamos la escena que contiene todos los objetos, camaras y luces
+		        scene = new THREE.Scene();
+
+		        // Creamos un Objeto Three.js (render) que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+				// Inicializamos el color del fondo y el tamano
+				renderer.setClearColor(0xEEEEEE);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				renderer.shadowMap.enabled = true;
+				renderer.shadowMap.type = THREE.PCFSoftShadowMap; // por defecto THREE.PCFShadowMap
+
+		        // Creamos la camara
+		        camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+		        // Posicionamos la camara en el centro de la escena
+		        camera.position.x = 25;
+		        camera.position.y = 26;
+		        camera.position.z = 23;
+		        camera.lookAt(scene.position);
+
+		        // Incluir un control orbital de la camara (orbit)
+		        // Autorotacion: false
+				orbit = new THREE.OrbitControls(camera);
+			    orbit.autoRotate = false;
+
+		        // Incluimos una esfera con textura del mapa terrestre (Tierra)
+		        creaTierra(15, 60, 60, "../texturas/tierra/", "earthmap4k.jpg", "earthbump4k.jpg", "earthspec4k.jpg");
+
+		        // Incluimos las nubes (un poco mas grande que la Tierra)
+		        creaNubes(15.25, 60, 60, "../texturas/tierra/", "fair_clouds_4k.png");
+
+		        // Incluimos el espacio estrellado (bastante mas grande que la Tierra)
+		        creaEspacio(90, 32, 32, "../texturas/tierra/", "galaxy_starfield.png");
+
+		        // Cargamos los datos de los volcanes
+		        cargaDatos(15, "../data/tierra/volcanoes.csv");
+
+		        //////////////// Luces
+		        // Luz ambiental: Un poco de luz a la escena
+		        // Color: 0x111111
+		        // Nombre: 'ambiental'
+		        var ambiental = new THREE.AmbientLight(0x111111);
+	        	ambiental.name = 'ambiental';
+	        	scene.add(ambiental);
+
+		        // Luz solar: Luz direccional
+		        // Color: 0xffffff
+		        // Intensidad: 1.0
+		        // Posicion: 100, 10, -50
+		        // Nombre: 'direccional'
+		        var luz = new THREE.DirectionalLight(0xffffff, 1);
+		        luz.position = new THREE.Vector3(100,10,-50);
+		        luz.name = 'direccional';
+		        scene.add(luz);
+
+		 		/////////////////////////
+
+		        // Incluir dos paneles de colores para luces ambiental y solar
+		        // Para menu GUI
+		        // Para añadir un panel de colores: .color.getHex()
+		        controles = new function () {
+		            this.rotationSpeed = 0.001;
+		            this.ambientLightColor     = scene.getObjectByName('ambiental').color.getHex();
+	            	this.directionalLightColor = scene.getObjectByName('direccional').color.getHex();
+		        };
+
+		        // Controles GUI
+		        addControlGui(controles);
+
+		        // Incluimos la salida del render al elemento html
+		        document.getElementById("WebGL-output").appendChild(renderer.domElement);
+
+	        	// Llamamos a la funcion de visualizacion
+	        	render();
+	    	}
+
+	    	/** 
+			 * Funcion que crea el menu en la parte superior derecha de la ventana
+			 * @param controles: objeto gui
+			 **/
+	    	function addControlGui(controles) {
+		        var gui = new dat.GUI();
+		        gui.add(controles, 'rotationSpeed', -0.01, 0.01);
+		        // Incluir los paneles de colores: ambientLightColor y directionalLightColor
+		        gui.addColor(controles, 'ambientLightColor');
+        		gui.addColor(controles, 'directionalLightColor');
+		    }
+
+	    	/** 
+			 * Creamos una textura
+			 * @param path: ruta donde se encuentra la imagen de textura
+			 * @param imagen: nombre de la imagen (textura) (con extension)
+			 **/
+			function creaTextura(path, imagen) {
+				var loader = new THREE.TextureLoader();
+				var textura = loader.load(path + imagen);
+				return textura;
+			}
+
+			/** 
+			 * Creamos una esfera
+			 * @param radio, sizex, sizey: radio y segmentos horizontales y verticales de la esfera
+			 * @param material: material de la esfera
+			 **/
+		    function creaEsfera(radio, sizex, sizey, material) {
+		    	var geometria = new THREE.SphereGeometry(radio, sizex, sizey);
+		        var objeto = new THREE.Mesh(geometria, material);
+		        return objeto;
+		    }
+
+		    /** 
+			 * Creamos la Tierra (radio = 15)
+			 * @param path: ruta donde se encuentra la imagen de textura
+			 * @param imagen1: nombre de la imagen (textura) (con extension)
+			 * @param imagen2: nombre de la imagen (bump mapping) (con extension)
+			 * @param imagen3: nombre de la imagen (specular mapping) (con extension)
+			 **/
+		    function creaTierra(radio, sizex, sizey, path, imagen1, imagen2, imagen3) {
+		        var textura          = creaTextura(path, imagen1);
+		        var texturaBump      = creaTextura(path, imagen2);
+		        var texturaEspecular = creaTextura(path, imagen3);
+		        var material = new THREE.MeshPhongMaterial();
+		        material.map         = textura;
+		        material.bumpMap     = texturaBump;
+		         material.bumpMap     = texturaBump;
+		        // bumpScale:   0.005, 0.1, 0.5
+				material.bumpScale = 0.1;
+		        material.specularMap = texturaEspecular;
+		        // Pondremos un poco de brillo en el material
+		        material.shininess = 0.2;
+		    	tierra = creaEsfera(radio, sizex, sizey, material);
+		        scene.add(tierra);
+		    }
+
+		    /** 
+			 * Creamos la atmosfera de la Tierra (las nubes, radio = 15.25)
+			 * @param path: ruta donde se encuentra la imagen de textura
+			 * @param imagen: nombre de la imagen (textura) (sin extension)
+			 **/
+		    function creaNubes(radio, sizex, sizey, path, imagen) {
+		        var textura = creaTextura(path, imagen);
+		        var material = new THREE.MeshPhongMaterial();
+		        material.map = textura;
+		        // Esta textura sera transparente
+		        material.transparent = true;
+		    	nubes = creaEsfera(radio, sizex, sizey, material);
+		        scene.add(nubes);
+		    }
+
+		    /** 
+			 * Creamos el espacio con textura estrellada
+			 * @param path: ruta donde se encuentra la imagen de textura
+			 * @param imagen: nombre de la imagen (textura) (sin extension)
+			 **/
+		    function creaEspacio(radio, sizex, sizey, path, imagen) {
+		        var textura  = creaTextura(path, imagen);
+		        var material = new THREE.MeshBasicMaterial();
+		        material.map = textura;
+		        // Utilizaremos la textura en la parte interna de la esfera que representa el espacio
+		        material.side  = THREE.BackSide;
+		    	espacio = creaEsfera(radio, sizex, sizey, material);
+		        scene.add(espacio);
+		    }
+
+		    /** 
+			 * Pasamos de coordenadas (latitud, longitud) a coordenadas XYZ sobre la esfera
+			 * @param latitud, longitud: latitud y longitud de la posicion
+			 * @param radio: radio de la esfera
+			 * @param altura: altura de la posicion
+			 **/
+		    function ToVector3(latitud, longitud, radio, altura) {
+		    	var phi = latitud * Math.PI / 180;
+    			var theta = (longitud - 180) * Math.PI / 180;
+
+			    var x = -(radio + altura) * Math.cos(phi) * Math.cos(theta);
+			    var y = (radio + altura) * Math.sin(phi);
+			    var z = (radio + altura) * Math.cos(phi) * Math.sin(theta);
+
+			    return new THREE.Vector3(x, y, z);
+			}
+
+			/** 
+			 * Creamos una particula con efecto glow
+			 * @param color: color de la particula
+			 **/
+			function creaSprite(color) {
+				var textura = creaTextura("../imagenes/", "glow.png");
+				var material = new THREE.SpriteMaterial({ 
+					map: textura,
+					color: color, 
+					transparent: false, 
+					blending: THREE.AdditiveBlending
+				});
+				var sprite = new THREE.Sprite( material );
+				sprite.scale.set(1.2, 1.2, 1.2);
+
+				return sprite;
+			}
+
+			/** 
+			 * Creamos una esfera con efecto glow en la posicion dada por la latitud y la longitud
+			 * @param latitud, longitud: latitud y longitud de la posicion
+			 * @param options: opciones como tamaño de la esfera, color, radio, ...
+			 **/
+			function creaPin(latitud, longitud, options) {
+			    var geometria = new THREE.SphereGeometry(options.size);
+			    var material = new THREE.MeshLambertMaterial({ color: options.color });
+			    var pin = new THREE.Mesh(geometria, material);
+
+				var posicion = ToVector3(latitud, longitud, options.radius, options.height);
+			    pin.position.copy(posicion);
+
+			    // Opcional
+			    //var sprite = creaSprite(options.color);
+
+			    //pin.add(sprite);
+
+			    return pin;
+			}
+
+			// This will parse a delimited string into an array of arrays. 
+			// The default delimiter is the comma, but this can be overriden in the second argument.
+			// via http://stackoverflow.com/questions/1293147/javascript-code-to-parse-csv-data
+			function CSVToArray( strData, strDelimiter ){
+			    // Check to see if the delimiter is defined. If not,
+			    // then default to comma.
+			    strDelimiter = (strDelimiter || ",");
+			    // Create a regular expression to parse the CSV values.
+			    var objPattern = new RegExp(
+			            (
+			                // Delimiters.
+			                   "(\\" + strDelimiter + "|\\r?\\n|\\r|^)" +
+			                // Quoted fields.
+			                    "(?:\"([^\"]*(?:\"\"[^\"]*)*)\"|" +
+			                // Standard fields.
+			                    "([^\"\\" + strDelimiter + "\\r\\n]*))"
+			            ),
+			        "gi"
+			    );
+			    // Create an array to hold our data. Give the array
+			    // a default empty first row.
+			    var arrData = [[]];
+			    // Create an array to hold our individual pattern
+			    // matching groups.
+			    var arrMatches = null;
+			    // Keep looping over the regular expression matches
+			    // until we can no longer find a match.
+			    while (arrMatches = objPattern.exec( strData )){
+			        // Get the delimiter that was found.
+			        var strMatchedDelimiter = arrMatches[ 1 ];
+			        // Check to see if the given delimiter has a length
+			        // (is not the start of string) and if it matches
+			        // field delimiter. If id does not, then we know
+			        // that this delimiter is a row delimiter.
+			        if (strMatchedDelimiter.length && (strMatchedDelimiter != strDelimiter)){
+			            // Since we have reached a new row of data,
+			            // add an empty row to our data array.
+			            arrData.push( [] );
+			        }
+			        // Now that we have our delimiter out of the way,
+			        // let's check to see which kind of value we
+			        // captured (quoted or unquoted).
+			        if (arrMatches[ 2 ]){
+			            // We found a quoted value. When we capture
+			            // this value, unescape any double quotes.
+			            var strMatchedValue = arrMatches[ 2 ].replace(
+			                    new RegExp( "\"\"", "g" ),
+			                    "\""
+			            );
+			        } else {
+			            // We found a non-quoted value.
+			            var strMatchedValue = arrMatches[ 3 ];
+			        }
+			        // Now that we have our value string, let's add
+			        // it to the data array.
+			        arrData[ arrData.length - 1 ].push( strMatchedValue );
+			    }
+			    // Return the parsed data.
+			    return( arrData );
+			}
+
+			/** 
+			 * Cargamos los datos del fichero de datos correspondientes a los volcanes del mundo
+			 * @param radio: radio de la esfera que representa el planeta Tierra
+			 * @param filename: nombre del fichero de datos (.csv)
+			 **/
+			function cargaDatos(radio, filename) {
+				pines = new THREE.Object3D();
+
+		        var options = { radius: radio, height: 0, size: 0.1, color: "red" };
+
+				// Cargamos y renderizamos los datos de densidad de poblacion
+		        var loader = new THREE.FileLoader();
+		        loader.load(
+		        	// resource URL
+		        	filename,
+		        	// Function when resource is loaded
+		        	function ( data ) {
+		        		var info = CSVToArray(data, ";");
+				        for (var i = 0 ; i < info.length-1 ; i++) {
+				        		var lat = info[i][3];
+				        		var lon = info[i][4];
+				            	var latitud  = parseFloat(lat.replace(",", "."));
+				            	var longitud = parseFloat(lon.replace(",", "."));
+
+				            	//console.log(info[i])
+
+					            var pin = creaPin(latitud, longitud, options);
+					            pines.add(pin);
+					    }
+			        },
+			        // Function called when download progresses
+				    function ( xhr ) {
+				        console.log( (xhr.loaded / xhr.total * 100) + '% loaded' );
+				    },
+				    // Function called when download errors
+				    function ( xhr ) {
+				        console.error( 'An error happened' );
+				    }
+		        );
+
+		        tierra.add(pines);
+		   	}
+
+		    /**
+		     * Funcion para visualizar la escena
+		     * El intervalo viene dado por requestAnimationFrame
+		     **/
+		    function render() {
+		        // Obtener delta a partir del reloj
+		        var delta = miReloj.getDelta();
+		        // Adaptar el control de la camara a partir de delta
+	            orbit.update(delta);
+
+	            // Rotar la tierra y las nubes segun la velocidad de rotacion (controles)
+	            // Las nubes rotan un poco mas deprisa (multiplicar por 1.1)
+	            tierra.rotation.y += controles.rotationSpeed;
+		        nubes.rotation.y  += controles.rotationSpeed*1.1;
+
+		        // Adaptar el color de la luz ambiental y solar a partir del mapa de color (controles)
+		        // Para buscar una luz en la escena: scene.getObjectByName(<nombre de la luz>)
+	        	scene.getObjectByName('ambiental').color   = new THREE.Color(controles.ambientLightColor);
+	        	scene.getObjectByName('direccional').color = new THREE.Color(controles.directionalLightColor);
+
+		        // render utilizando requestAnimationFrame
+		        requestAnimationFrame(render);
+                renderer.render(scene, camera);
+		    }
+
+		    /**
+	     	 * Funcion que controla el tamano y asegura que la camara y el render
+		 	 * se adaptan en el instante correcto
+	     	 **/
+	    	function handleResize() {
+		        camera.aspect = window.innerWidth / window.innerHeight;
+			    camera.updateProjectionMatrix();
+			    renderer.setSize(window.innerWidth, window.innerHeight);
+	    	}
+
+		    // Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+
+    		// Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+    		window.addEventListener('resize', handleResize, false);
+		</script>
+	</body>
+</html>

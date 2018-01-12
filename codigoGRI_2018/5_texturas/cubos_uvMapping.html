@@ -1,0 +1,163 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+		<meta charset=utf-8> 
+		<title> Cubos: UV Mapping Texture </title> 
+		<style> 
+			body { margin: 0; overflow: hidden; } 
+		</style> 
+	</head> 
+
+	<body> 
+		<div id="WebGL-output"> 
+        </div>
+
+		<script src="../libs/three.js"></script>
+		<script src="../libs/dat.gui.js"></script>
+		<script src="../libs/loaders/OBJLoader.js"></script>
+
+		<script>
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			var material;
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+				// Creamos la escena que contiene todos los objetos, camaras y luces
+				scene = new THREE.Scene();
+
+				// Creamos el objeto render que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+
+				// Inicializamos el color del fondo y el tamano
+				renderer.setClearColor(0xEEEEEE);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				renderer.shadowMap.enabled = true;
+				renderer.shadowMap.type = THREE.PCFSoftShadowMap; // por defecto THREE.PCFShadowMap
+
+				// Creamos la camara
+				camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+				// Posicionamos la camara en el centro de la escena
+		        camera.position.x = -30;
+        		camera.position.y = 40;
+        		camera.position.z = 50;
+		        camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+		        // Foco
+		        var foco = new THREE.SpotLight(0xffffff);
+		        foco.position.set(-30, 60, 50);
+		        foco.intensity = 1.5;
+		        scene.add(foco);
+
+		        // Creamos el primer cubo
+		        material = creaMaterial();
+		        creaCuboOriginal('../modelos/UVCube1.obj', material);
+
+		        // Controles
+		        var controles = new function () {
+            		this.loadCube1 = function () {
+		                creaCubo('../modelos/UVCube1.obj');
+            		};
+            		this.loadCube2 = function () {
+            			creaCubo('../modelos/UVCube2.obj');
+            		};
+ 				}
+
+ 				// Incluimos controles en el menu
+ 				addControlGui(controles);
+
+				// Incluimos la salida del render al elemento html
+				document.getElementById("WebGL-output").appendChild(renderer.domElement);
+
+				// Llamamos a la funcion de visualizacion 
+				render();
+			}
+
+			/** 
+			 * Funcion que crea el menu en la parte superior derecha de la ventana
+			 * @param controlObject: objeto gui
+			 **/
+			function addControlGui(controles) {
+				var gui = new dat.GUI();
+
+				gui.add(controles, 'loadCube1');
+        		gui.add(controles, 'loadCube2');
+			}
+
+			// Creamos el material
+			function creaMaterial() {
+				var loader = new THREE.TextureLoader();
+				var textura = loader.load("../texturas/uv/ash_uvgrid01.jpg");
+				var material = new THREE.MeshBasicMaterial();
+			    material.map = textura;
+			    return material;
+			}
+
+			// Creamos el cubo original
+			function creaCuboOriginal(nombre_objeto, material) {
+				var loader = new THREE.OBJLoader();
+		        loader.load(nombre_objeto, 
+		            function (objeto) {
+			            objeto.children[0].material = material;
+			            objeto.scale.set(15, 15, 15);
+			            objeto.name = "cubo";
+				        scene.add(objeto);
+		            }
+		        );
+			}
+
+			// Creamos un cubo
+			function creaCubo(nombre_objeto) {
+				var loader = new THREE.OBJLoader();
+		        loader.load(nombre_objeto, 
+		            function (malla_new) {
+		            	// Buscamos el cubo existente en la escena
+		            	var malla = scene.getObjectByName( "cubo" );
+		            	// Guardamos su posicion y su rotacion para aplicarselas al nuevo cubo
+		            	var p = malla.position.clone();
+		            	var q = malla.quaternion.clone();
+		            	// Eliminamos el cubo existente en la escena
+		                scene.remove(malla);
+		                // Asignamos a la nueva malla el material ya existente
+			            malla_new.children[0].material = material;
+			            malla_new.scale.set(15, 15, 15);
+			            // Copiamos la posicion y la rotacion del cubo ya eliminado a la nueva malla
+				        malla_new.position.copy(p);
+				        malla_new.quaternion.copy(q);
+				        // Asignamos el nombre a la nueva malla
+				        malla_new.name = "cubo";
+				        // Incluimos el nuevo cubo en la escena
+				        scene.add(malla_new);
+		            }
+		        );
+			}
+
+			/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+			function render() {
+				var malla = scene.getObjectByName( "cubo" );
+				if (malla) {
+		            malla.rotation.y += 0.006;
+		            malla.rotation.x += 0.006;
+		        }
+
+				// render utilizando requestAnimationFrame
+				requestAnimationFrame(render);
+				renderer.render(scene, camera);
+			}
+
+			// Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+		</script>
+	</body> 
+</html>

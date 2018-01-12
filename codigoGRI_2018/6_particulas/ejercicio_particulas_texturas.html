@@ -1,0 +1,142 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+		<meta charset=utf-8> 
+		<title> Ejercicio: Sistema de Particulas con textura </title> 
+		<style> 
+			body { 
+				margin: 0;
+            	overflow: hidden;
+            	background-color: #000000; 
+            } 
+		</style> 
+	</head> 
+
+	<body> 
+		<script src="../libs/three.js"></script>
+		<script src="../libs/dat.gui.js"></script>
+
+		<script>
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			var controles;
+
+			var sistema;
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+				// Creamos la escena que contiene todos los objetos, camaras y luces
+				scene = new THREE.Scene();
+
+				// Creamos el objeto render que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+        		renderer.setClearColor(0x000000);
+        		renderer.setSize(window.innerWidth, window.innerHeight);
+
+				// Creamos la camara
+				camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+				// Posicionamos la camara en el centro de la escena
+		        camera.position.x = 20;
+		        camera.position.y = 0;
+		        camera.position.z = 150;
+		        camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+		        // @TODO: Creamos unos controles con los siguientes parametros:
+		        // maxParticulas: numero maximo de particulas (def. 100)
+		        // size: tamaño de cada particula (def. 10)
+		        // transparent: transparente o no (def. true)
+		        // opacity: nivel de opacidad de la particula (def. 0.6)
+		        // rotateSystem: rotacion o no del sistema de particulas
+		        // ...
+		       
+		        //addControlGui(controles);
+		        //controles.redraw();
+
+				// Incluimos la salida del render al elemento html
+				document.body.appendChild(renderer.domElement);
+
+				// Llamamos a la funcion de visualizacion 
+				render();
+
+			}
+
+			/** 
+			 * Funcion que crea el menu en la parte superior derecha de la ventana
+			 * @param controlObject: objeto gui
+			 **/
+			function addControlGui(controles) {
+				var gui = new dat.GUI();
+
+				gui.add(controles, 'maxParticulas', 10, 1000).onChange(controles.redraw);
+				gui.add(controles, 'size', 0, 20).onChange(controles.redraw);
+        		gui.add(controles, 'transparent').onChange(controles.redraw);
+        		gui.add(controles, 'opacity', 0, 1).onChange(controles.redraw);
+        		gui.add(controles, 'rotateSystem');
+			}
+
+        	/** 
+			 * Creamos una textura
+			 * @param path: ruta donde se encuentra la imagen de textura
+			 * @param imagen: nombre de la imagen (textura) (con extension)
+			 **/
+			function creaTextura(path, imagen) {
+				var loader = new THREE.TextureLoader();
+				var textura = loader.load(path + imagen);
+				return textura;
+			}
+
+			/** 
+			 * Creacion del sistema de particulas
+			 **/
+			function creaParticulas(maxParticulas, size, transparent, opacity) {
+
+				var textura = creaTextura("../texturas/particulas/", "snowflake1.png");
+
+				// @TODO: Creacion de un sistema de particulas
+				// El material de la particula tiene una textura
+				// Se generan las particulas como vertices de una geometria donde 
+				// las posiciones iniciales de dichos vertices se generan aleatoriamente:
+				// coordenada (x, y, z) = Math.random() * 500 - 250
+				// Para añadir vertices a la geometria podemos utilizar la funcion .push()
+				// ...
+			}
+
+			/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+			function render() {
+				// @TODO: Si controles.rotateSystem == true, rotamos el sistema de particulas (coordenadas x y z) con un incremento de 0.01
+				// ...
+
+				// render utilizando requestAnimationFrame
+				requestAnimationFrame(render);
+				renderer.render(scene, camera);
+			}
+
+	     	/**
+	     	 * Funcion que controla el tamano y asegura que la camara y el render
+		 	 * se adaptan en el instante correcto
+	     	 **/
+	    	function handleResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize(window.innerWidth, window.innerHeight);
+	    	}
+
+			// Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+
+    		// Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+    		window.addEventListener('resize', handleResize, false);
+		</script>
+	</body> 
+</html>

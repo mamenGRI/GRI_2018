@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+	<head> 
+		<meta charset=utf-8> 
+		<title> Ejercicio: Planeta Tierra </title> 
+		<style> 
+			body { margin: 0; } 
+			canvas { width: 100%; height: 100% } 
+		</style> 
+	</head> 
+	<body>
+		<div id="WebGL-output"></div>
+
+		<script src="../libs/three.js"></script>
+		<script src="../libs/dat.gui.js"></script>
+		<script src="../libs/camara/OrbitControls.js"></script>
+
+		<script>
+		    // global variables
+		    var renderer;
+		    var scene;
+		    var camera;
+
+		    var controles;
+		    var orbit;
+
+		    var tierra;
+		    var nubes;
+		    var espacio;
+
+		    var miReloj;
+
+		    /**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+		    function init() {
+		    	// @TODO: Incluir un reloj denominado miReloj
+		    	// ...
+
+		        // Creamos la escena que contiene todos los objetos, camaras y luces
+		        scene = new THREE.Scene();
+
+		        // Creamos un Objeto Three.js (render) que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+				// Inicializamos el color del fondo y el tamano
+				renderer.setClearColor(0xEEEEEE);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				renderer.shadowMap.enabled = true;
+				renderer.shadowMap.type = THREE.PCFSoftShadowMap; // por defecto THREE.PCFShadowMap
+
+		        // Creamos la camara
+		        camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+		        // Posicionamos la camara en el centro de la escena
+		        camera.position.x = 25;
+		        camera.position.y = 26;
+		        camera.position.z = 23;
+		        camera.lookAt(scene.position);
+
+		        // @TODO: Incluir un control orbital de la camara (orbit)
+		        // Autorotacion: false
+				// ...
+
+		        // Incluimos una esfera con textura del mapa terrestre (Tierra)
+		        creaTierra(15, 60, 60, "../textures/tierra/", "earthmap4k.jpg", 
+		        			"earthbump4k.jpg", "earthspec4k.jpg", "earth_normalmap_flat4k.jpg");
+
+		        // Incluimos las nubes (un poco mas grande que la Tierra)
+		        creaNubes(15.25, 60, 60, "../textures/tierra/", "fair_clouds_4k.png");
+
+		        // Incluimos el espacio estrellado (bastante mas grande que la Tierra) 
+		        creaEspacio(90, 32, 32, "../textures/tierra/", "galaxy_starfield.png");
+
+		        //////////////// @TODO: Luces
+		        // Luz ambiental: Un poco de luz a la escena
+		        // Color: 0x111111
+		        // Nombre: 'ambiental'
+		        // ...
+
+		        // Luz solar: Luz direccional
+		        // Color: 0xffffff
+		        // Intensidad: 1.0
+		        // Posicion: 100, 10, -50
+		        // Nombre: 'direccional'
+		        // ...
+
+		 		/////////////////////////
+
+		        // @TODO: Incluir dos paneles de colores para luces ambiental y solar
+		        // Para menu GUI
+		        // Para añadir un panel de colores: .color.getHex()
+		        // Para buscar una luz en la escena: scene.getObjectByName(<nombre de la luz>)
+		        // ...
+		        controles = new function () {
+		            this.rotationSpeed = 0.001;
+		            // this.ambientLightColor = 
+	            	// this.directionalLightColor = 
+		        };
+
+		        // Controles GUI
+		        addControlGui(controles);
+
+		        // Incluimos la salida del render al elemento html
+		        document.getElementById("WebGL-output").appendChild(renderer.domElement);
+
+	        	// Llamamos a la funcion de visualizacion
+	        	render();
+	    	}
+
+	    	/** 
+			 * Funcion que crea el menu en la parte superior derecha de la ventana
+			 * @param controles: objeto gui
+			 **/
+	    	function addControlGui(controles) {
+		        var gui = new dat.GUI();
+		        gui.add(controles, 'rotationSpeed', -0.01, 0.01);
+		        // @TODO: Incluir los paneles de colores: ambientLightColor y directionalLightColor
+		        // ...
+		    }
+
+	    	/** 
+			 * Creamos una textura
+			 * @param path: ruta donde se encuentra la imagen de textura
+			 * @param imagen: nombre de la imagen (textura) (con extension)
+			 **/
+			function creaTextura(path, imagen) {
+				var loader = new THREE.TextureLoader();
+				var textura = loader.load(path + imagen);
+				return textura;
+			}
+
+			/** 
+			 * Creamos una esfera
+			 * @param radio, sizex, sizey: radio y segmentos horizontales y verticales de la esfera
+			 * @param material: material de la esfera
+			 **/
+		    function creaEsfera(radio, sizex, sizey, material) {
+		    	var geometria = new THREE.SphereGeometry(radio, sizex, sizey);
+		        var objeto = new THREE.Mesh(geometria, material);
+		        return objeto;
+		    }
+
+		    /** 
+			 * Creamos la Tierra (radio = 15)
+			 * @param path: ruta donde se encuentra la imagen de textura
+			 * @param imagen1: nombre de la imagen (textura) (con extension)
+			 * @param imagen2: nombre de la imagen (bump mapping) (con extension)
+			 * @param imagen3: nombre de la imagen (specular mapping) (con extension)
+			 * @param imagen4: nombre de la imagen (normal mapping) (con extension)
+			 **/
+		    function creaTierra(radio, sizex, sizey, path, imagen1, imagen2, imagen3, imagen4) {
+		        // 4096 is the maximum width for maps
+		        var material = new THREE.MeshPhongMaterial();
+
+		        // @TODO: Textura
+		        // @TODO: Bump mapping
+		        // @TODO: Reflexion de la superficie
+	    		// @TODO: Mapa de normales
+	    		// Pondremos un poco de brillo en el material
+	    		// material.shininess = ...
+	    		// ...
+
+		    	tierra = creaEsfera(radio, sizex, sizey, material);
+		        //scene.add(tierra);
+		    }
+
+		    /** 
+			 * Creamos la atmosfera de la Tierra (las nubes, radio = 15.25)
+			 * @param path: ruta donde se encuentra la imagen de textura
+			 * @param imagen: nombre de la imagen (textura) (sin extension)
+			 **/
+		    function creaNubes(radio, sizex, sizey, path, imagen) {
+		        var material = new THREE.MeshPhongMaterial();
+
+		        // @TODO: Textura
+		        // Esta textura sera transparente
+		        // material.transparent = ...
+		        // ...
+
+		    	nubes = creaEsfera(radio, sizex, sizey, material);
+		        //scene.add(nubes);
+		    }
+
+		    /** 
+			 * Creamos el espacio con textura estrellada
+			 * @param path: ruta donde se encuentra la imagen de textura
+			 * @param imagen: nombre de la imagen (textura) (sin extension)
+			 **/
+		    function creaEspacio(radio, sizex, sizey, path, imagen) {
+		        var material = new THREE.MeshBasicMaterial();
+
+		        // @TODO: Textura
+		        // Utilizaremos la textura en la parte interna de la esfera que representa el espacio
+		        // material.side = ...
+		        // ...
+
+		    	espacio = creaEsfera(radio, sizex, sizey, material);
+		        //scene.add(espacio);
+		    }
+
+		    /**
+		     * Funcion para visualizar la escena
+		     * El intervalo viene dado por requestAnimationFrame
+		     **/
+		    function render() {
+		        // @TODO: Obtener delta a partir del reloj
+		        // ...
+
+		        // @TODO: Adaptar el control de la camara a partir de delta
+		        // ...
+
+	            // @TODO: rotar la tierra y las nubes segun la velocidad de rotacion (controles)
+	            // Las nubes rotan un poco mas deprisa (multiplicar por 1.1)
+	            // ...
+
+		        // @TODO: Adaptar el color de la luz ambiental y solar a partir del mapa de color (controles)
+		        // Para buscar una luz en la escena: scene.getObjectByName(<nombre de la luz>)
+		        // ...
+
+		        // render utilizando requestAnimationFrame
+		        requestAnimationFrame(render);
+                renderer.render(scene, camera);
+		    }
+
+		    /**
+	     	 * Funcion que controla el tamano y asegura que la camara y el render
+		 	 * se adaptan en el instante correcto
+	     	 **/
+	    	function handleResize() {
+		        camera.aspect = window.innerWidth / window.innerHeight;
+			    camera.updateProjectionMatrix();
+			    renderer.setSize(window.innerWidth, window.innerHeight);
+	    	}
+
+		    // Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+
+    		// Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+    		window.addEventListener('resize', handleResize, false);
+		</script>
+	</body>
+</html>

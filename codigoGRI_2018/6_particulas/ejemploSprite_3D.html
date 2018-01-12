@@ -1,0 +1,133 @@
+<!DOCTYPE html> 
+<html> 
+    <head> 
+        <meta charset=utf-8> 
+        <title> Ejemplo Sprite </title> 
+        <style> 
+            body { 
+                margin: 0;
+                overflow: hidden;
+                background-color: #000000; 
+            } 
+        </style> 
+    </head> 
+
+    <body>
+        <div id="WebGL-output">
+        </div>
+
+        <script src="../libs/three.js"></script>
+        <script src="../libs/dat.gui.js"></script>
+
+        <script>
+            // variables globales
+            var renderer;
+            var scene;
+            var camera;
+
+            var grupo;
+
+            /**
+             * Inicializacion Three.js
+             *
+             * Inicializa la escena, la camara y las luces
+             * Se llama cuando se carga la ventana mediante la funcion window.onload
+             **/
+            function init() {
+                // Creamos la escena que contiene todos los objetos, camaras y luces
+                scene = new THREE.Scene();
+
+                // Creamos el objeto render que usaremos para visualizar la escena
+                renderer = new THREE.WebGLRenderer();
+                renderer.setClearColor(0x000000);
+                renderer.setSize(window.innerWidth, window.innerHeight);
+  
+                // Creamos la camara
+                camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 200);
+                // Posicionamos la camara en el centro de la escena
+                camera.position.x = 20;
+                camera.position.y = 0;
+                camera.position.z = 50;
+
+                // Crea un grupo de sprites
+                grupo = creaGrupoSprite();
+                scene.add(grupo);
+
+                // Incluimos la salida del render al elemento html
+                document.getElementById("WebGL-output").appendChild(renderer.domElement);
+
+                // Llamamos a la funcion de visualizacion 
+                render();
+            }
+
+            /** 
+             * Creamos una textura
+             * @param path: ruta donde se encuentra la imagen de textura
+             * @param imagen: nombre de la imagen (textura) (con extension)
+             **/
+            function creaTextura(path, imagen) {
+                var loader = new THREE.TextureLoader();
+                var textura = loader.load(path + imagen);
+                return textura;
+            }
+
+            /** 
+             * Crea un sprite
+             **/
+            function creaSprite(size, transparent, opacity, color, spriteNumber, range) {
+                var textura = creaTextura("../texturas/particulas/", "sprite-sheet.png");
+
+                var material = new THREE.SpriteMaterial({
+                        opacity: opacity,
+                        color: color,
+                        transparent: transparent,
+                        map: textura
+                    }
+                );
+
+                // we have 1 row, with five sprites
+                material.map.offset = new THREE.Vector2(0.2 * spriteNumber, 0);
+                material.map.repeat = new THREE.Vector2(1 / 5, 1);
+                material.depthTest = false;
+
+                material.blending = THREE.AdditiveBlending;
+
+                var sprite = new THREE.Sprite(material);
+                sprite.scale.set(size, size, size);
+                sprite.position.set(Math.random() * range - range / 2, 
+                    Math.random() * range - range / 2, 
+                    Math.random() * range - range / 2);
+                sprite.velocityX = 5;
+
+                return sprite;
+            }
+
+            /**
+             * Crea un grupo de sprites
+             **/
+            function creaGrupoSprite() {
+                grupo = new THREE.Object3D();
+                var rango = 200;
+                for (var i = 0; i < 400; i++) {
+                    grupo.add(creaSprite(10, false, 0.6, 0xffffff, i % 5, rango));
+                }
+                return grupo;
+            }
+
+            /**
+             * Funcion para visualizar la escena
+             * El intervalo viene dado por requestAnimationFrame
+             **/
+            function render() {
+                grupo.rotation.x += 0.01;
+
+                requestAnimationFrame(render);
+                renderer.render(scene, camera);
+
+            }
+
+            // Llama a la funcion init() cuando se carga la ventana 
+            window.onload = init;
+        </script>
+    </body> 
+</html>

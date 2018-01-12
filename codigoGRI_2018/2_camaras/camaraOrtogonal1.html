@@ -1,0 +1,147 @@
+<!DOCTYPE html> 
+<html> 
+    <head> 
+        <meta charset=utf-8> 
+        <title> Camara ortogonal 1 </title> 
+        <style> 
+            body { margin: 0; } 
+            canvas { width: 100%; height: 100% } 
+        </style> 
+    </head> 
+
+    <body> 
+        <script src="../libs/three.js"></script>
+        <script src="../libs/dat.gui.js"></script>
+
+        <script>
+            // variables globales
+            var renderer;
+            var scene;
+            var camera;
+
+            var cubo;
+            var controles;
+
+            /**
+             * Inicializacion Three.js
+             *
+             * Inicializa la escena, la camara y las luces
+             * Se llama cuando se carga la ventana mediante la funcion window.onload
+             **/
+            function init() {
+                // Creamos la escena que contiene todos los objetos, camaras y luces
+                scene = new THREE.Scene();
+
+                // Creamos el objeto render que usaremos para visualizar la escena
+                renderer = new THREE.WebGLRenderer();
+                // Inicializamos el color del fondo y el tamano
+                renderer.setClearColor(0x000000);
+                renderer.setSize(window.innerWidth, window.innerHeight);
+ 
+                // Creamos la camara con proyeccion ortografica
+                camera = new THREE.OrthographicCamera();
+
+                camera.right = window.innerWidth / 30;
+                camera.left = - camera.right;
+                camera.top = window.innerHeight / 30;
+                camera.bottom = - camera.top;
+                camera.near = 0.1;
+                camera.far = 1500;
+
+                // Creamos el volumen de vision
+                camera.updateProjectionMatrix();
+
+                // Posicionamos la camara y la enfocamos hacia el centro de la escena
+                camera.position.x = -50;
+                camera.position.y = 20;
+                camera.position.z = 30;
+                camera.lookAt(scene.position);
+
+                // Creacion del objeto de control (GUI)
+                controles = new function () {
+                    this.rotationSpeed = 0.005;
+                    this.scale = 1;
+                    this.left = camera.left;
+                    this.right = camera.right;
+                    this.top = camera.top;
+                    this.bottom = camera.bottom;
+                    this.far = camera.far;
+                    this.near = camera.near;
+
+                    this.updateCamera = function () {
+                        camera.left = controles.left;
+                        camera.right = controles.right;
+                        camera.top = controles.top;
+                        camera.bottom = controles.bottom;
+                        camera.far = controles.far;
+                        camera.near = controles.near;
+
+                        camera.updateProjectionMatrix();
+                    };
+                };
+
+                // Incluimos el objeto control en la escena
+                addControlGui(controles);
+
+                // Creamos un cubo y lo incluimos en la escena
+                var geometria = new THREE.BoxGeometry(10 * Math.random(), 10 * Math.random(), 10 * Math.random());
+                var material = new THREE.MeshNormalMaterial();
+                //material.transparent = true;
+                cubo = new THREE.Mesh(geometria, material);
+                cubo.name = 'cubo';
+                scene.add(cubo);
+
+                // Incluimos la salida del render al elemento html
+                document.body.appendChild(renderer.domElement);
+
+                // Llamamos a la funcion de visualizacion 
+                render();
+
+            }
+
+            /** 
+             * Funcion que crea el menu en la parte superior derecha de la ventana
+             * @param controles: objeto gui
+             **/
+            function addControlGui(controles) {
+                var gui = new dat.GUI();
+                gui.add(controles, 'rotationSpeed', -0.1, 0.1);
+                gui.add(controles, 'scale', 0.01, 2);
+                gui.add(controles, 'left', -100, 0).onChange(controles.updateCamera);
+                gui.add(controles, 'right', 0, 100).onChange(controles.updateCamera);
+                gui.add(controles, 'top', 0, 100).onChange(controles.updateCamera);
+                gui.add(controles, 'bottom', -100, 0).onChange(controles.updateCamera);
+                gui.add(controles, 'far', 20, 2000).onChange(controles.updateCamera);
+                gui.add(controles, 'near', 0, 50).onChange(controles.updateCamera);
+            }
+
+            /**
+             * Funcion para visualizar la escena
+             * El intervalo viene dado por requestAnimationFrame
+             **/
+            function render() {
+                // render utilizando requestAnimationFrame
+                renderer.render(scene, camera);
+                cubo.rotation.x += controles.rotationSpeed;
+                cubo.scale.set(controles.scale, controles.scale, controles.scale);
+                requestAnimationFrame(render);
+            }
+
+            /**
+             * Funcion que controla el tamano y asegura que la camara y el render
+             * se adaptan en el instante correcto
+             **/
+            function handleResize() {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+
+            // Llama a la funcion init() cuando se carga la ventana 
+            window.onload = init;
+
+            // Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+            window.addEventListener('resize', handleResize, false);
+        </script>
+    </body> 
+</html>

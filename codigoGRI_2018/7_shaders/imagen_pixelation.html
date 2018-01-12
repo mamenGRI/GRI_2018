@@ -1,0 +1,174 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+		<meta charset=utf-8> 
+		<title> Pixelacion de Imagen </title> 
+		<style> 
+			body { margin: 0; } 
+			canvas { width: 100%; height: 100% } 
+		</style> 
+	</head> 
+
+	<body>
+		<script src="../libs/three.min.js"></script> 
+		<script src="../libs/dat.gui.min.js"></script>
+		<script src="../libs/camara/OrbitControls.js"></script> 
+
+		<script type="x-shader/x-vertex" id="vertex-shader">
+			// Vertex shader
+			varying vec2 coordsUV;
+
+			void main() {    
+				coordsUV = uv;     
+				gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);  
+			}
+		</script>
+
+		<script type="x-shader/x-fragment" id="fragment-shader">
+			// Fragment shader
+			varying vec2 coordsUV;
+			// Tiempo en segundos
+			uniform float time;
+
+			uniform float offset;
+			uniform vec2 uResolution;
+			uniform vec2 uPixel;
+
+			uniform sampler2D textura;
+      
+      		void main() {
+      			vec2 newCoordsUV;
+      			vec3 f_color;
+
+		      	if (coordsUV.x < (offset-0.005)) {
+		      		vec2 d;
+		      		d.x = uPixel.x * (1./uResolution.x);
+		      		d.y = uPixel.y * (1./uResolution.y);
+		        	newCoordsUV = vec2(d.x*floor(coordsUV.x/d.x), d.y*floor(coordsUV.y/d.y));
+		      	} else if (coordsUV.x>=(offset+0.005)) {
+		        	newCoordsUV = coordsUV;
+		      	}
+		      	f_color = texture2D(textura, newCoordsUV).rgb;
+		    	gl_FragColor = vec4(f_color, 1.0);
+			}
+		</script>	
+
+		<script>
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			var orbit;
+
+			var miReloj;
+
+			var uniformes;
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+
+				// Creamos un reloj
+                miReloj = new THREE.Clock();
+                miReloj.start();
+
+				// Creamos la escena que contiene todos los objetos, camaras y luces
+				scene = new THREE.Scene();
+
+				// Creamos el objeto render que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+				renderer.antialias = false;
+				renderer.setSize(window.innerWidth, window.innerHeight);
+    			renderer.setClearColor(0xccccff);
+ 
+				// Creamos la camara
+				camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
+			    camera.position.set(0, 0, 800);
+			    camera.lookAt(scene.position);
+
+			    // Creamos los controles Orbit
+                orbit = new THREE.OrbitControls(camera);
+                orbit.autoRotate = true;
+
+                // Variables uniformes: textura, time, offset, pixel, resolucion
+                uniformes = {
+                	textura: { type: "t", value: creaTextura("../texturas/general/", "bathroom.jpg" ) },
+                	time: { type: "f", value: 0.0 },
+                	offset: {type: "f", value: 1}, // de 0 a 1 (probar 0.5)
+                	uPixel: {type: "v2", value: new THREE.Vector2(50.0, 40.0)}, // 15.0, 10.0 // 25.0, 20.0
+//                	uResolution: {type: "v2", value: new THREE.Vector2(512.0, 512.0)}
+					uResolution: {type: "v2", value: new THREE.Vector2(window.innerWidth, window.innerHeight)}
+                 }
+
+	            // Plano
+	            var material = new THREE.ShaderMaterial({
+	            	uniforms: uniformes,
+	            	side: THREE.DoubleSide,
+			        vertexShader: document.getElementById('vertex-shader').textContent,
+			        fragmentShader: document.getElementById('fragment-shader').textContent
+			    });
+
+			    var geometria = new THREE.PlaneGeometry(500, 500, 10, 10);
+			    var plano = new THREE.Mesh(geometria, material);
+			    scene.add(plano);
+
+				// Incluimos la salida del render al elemento html
+				document.body.appendChild(renderer.domElement);
+
+				// Llamamos a la funcion de visualizacion 
+				render();
+			}
+
+			/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+			function render() {
+				// Adaptamos el reloj
+                var delta = miReloj.getDelta();
+                // Adaptamos los controles trackball
+                orbit.update(delta);
+
+                // render utilizando requestAnimationFrame
+                requestAnimationFrame(render);
+
+                uniformes.time.value += delta;
+                
+                renderer.render(scene, camera);
+			}
+
+			/** 
+			 * Creamos una textura
+			 * @param path: ruta donde se encuentra la imagen de textura
+			 * @param imagen: nombre de la imagen (textura) (con extension)
+			 **/
+			function creaTextura(path, imagen) {
+				var loader = new THREE.TextureLoader();
+				var textura = loader.load(path + imagen);
+				return textura;
+			}
+
+	     	/**
+	     	 * Funcion que controla el tamano y asegura que la camara y el render
+		 	 * se adaptan en el instante correcto
+	     	 **/
+	    	function handleResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+			    camera.updateProjectionMatrix();
+			    renderer.setSize(window.innerWidth, window.innerHeight);
+	    	}
+
+			// Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+
+    		// Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+    		window.addEventListener('resize', handleResize, false);
+
+		</script>
+	</body> 
+</html>

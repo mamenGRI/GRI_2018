@@ -1,0 +1,110 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+		<meta charset=utf-8> 
+		<title> Ejercicio: Triangulo rectangulo 2D </title> 
+		<style> 
+			body { margin: 0; } 
+			canvas { width: 100%; height: 100% } 
+		</style> 
+	</head> 
+
+	<body> 
+		<script src="../libs/three.js"></script> 
+
+		<script>
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+				// Creamos la escena que contiene todos los objetos, camaras y luces
+				scene = new THREE.Scene();
+
+				// Creamos el Objeto render que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+				// Inicializamos el color del fondo y el tamano
+				renderer.setClearColor(0xEEEEEE);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				renderer.shadowMap.enabled = true;
+				renderer.shadowMap.type = THREE.PCFSoftShadowMap; // por defecto THREE.PCFShadowMap
+
+				// Creamos la camara
+				windowScale = 12;
+				var windowWidth = windowScale * (window.innerWidth / window.innerHeight);
+				var windowHeight = windowScale;
+				camera = new THREE.OrthographicCamera(-windowWidth/2, windowWidth/2, windowHeight/2, -windowHeight/2, 0, 40);
+	
+				// Punto 3D hacia donde mira la camara
+				var punto = new THREE.Vector3( 5,5,0 );
+				camera.position.x = punto.x;
+				camera.position.y = punto.y;
+				camera.position.z = 20;
+				camera.lookAt(punto);
+
+				// CREAMOS UN RECTANGULO
+				// Material
+				var material = new THREE.MeshBasicMaterial({ color: 0xF6831E, side: THREE.DoubleSide });
+				// Rectangulo entre (x1, y1) = (3,3) y (x2, y2) = (7,7)
+				var rectangulo1 = creaRectangulo(3, 3, 7, 7, material);
+				scene.add(rectangulo1)
+
+				// CREAMOS OTRO RECTANGULO
+				// Material
+				var material = new THREE.MeshBasicMaterial({ color: 0x2685AA, side: THREE.DoubleSide });
+				// Rectangulo entre (x1, y1) = (0,0) y (x2, y2) = (4,5)
+				var rectangulo2 = creaRectangulo(0, 0, 4, 5, material);
+				scene.add(rectangulo2)			
+
+				// Incluimos la salida del render al elemento html
+				document.body.appendChild(renderer.domElement);
+
+				// Llamamos a la funcion de visualizacion 
+				render();
+			}
+
+			function creaRectangulo(x1, y1, x2, y2, material){
+				var geometria = new THREE.Geometry();
+				
+				// @TODO: Creamos la geometria del rectangulo
+				// ...
+				
+				var malla = new THREE.Mesh(geometria, material);
+				return(malla);
+			}
+
+			/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+			function render() {
+				// render utilizando requestAnimationFrame
+				requestAnimationFrame(render);
+				renderer.render(scene, camera);
+			}
+
+	     	/**
+	     	 * Funcion que controla el tamano y asegura que la camara y el render
+		 	 * se adaptan en el instante correcto
+	     	 **/
+	    	function handleResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize(window.innerWidth, window.innerHeight);
+	    	}
+
+			// Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+
+    		// Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+    		window.addEventListener('resize', handleResize, false);
+		</script>
+	</body> 
+</html>

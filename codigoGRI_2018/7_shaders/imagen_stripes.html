@@ -1,0 +1,162 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+		<meta charset=utf-8> 
+		<title> Imagen con efecto: Stripes </title> 
+		<style> 
+			body { margin: 0; } 
+			canvas { width: 100%; height: 100% } 
+		</style> 
+	</head> 
+
+	<body>
+		<script src="../libs/three.min.js"></script> 
+		<script src="../libs/dat.gui.min.js"></script>
+		<script src="../libs/camara/OrbitControls.js"></script> 
+
+		<script type="x-shader/x-vertex" id="vertex-shader">
+			// Vertex shader
+			varying vec2 coordsUV;
+
+			void main() {    
+				coordsUV = uv;     
+				gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);  
+			}
+		</script>
+
+		<script type="x-shader/x-fragment" id="fragment-shader">
+			// Fragment shader
+			uniform sampler2D textura;
+			// Tiempo en segundos
+			uniform float time;
+			varying vec2 coordsUV;
+
+			float stripes(vec2 p, float steps) {
+				return fract(p.x*steps);
+			}
+
+			void main() {
+			  vec4 color = texture2D(textura, coordsUV);
+			  vec2 p = coordsUV;
+			  p.x += color.r * 0.1 * sin(time);
+			  float brillo = stripes(p, 10.);
+			  gl_FragColor = vec4(brillo, brillo, brillo, 1.0);
+			}
+
+		</script>	
+
+		<script>
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			var orbit;
+
+			var miReloj;
+
+			var uniformes;
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+				// Creamos un reloj
+                miReloj = new THREE.Clock();
+                miReloj.start();
+
+				// Creamos la escena que contiene todos los objetos, camaras y luces
+				scene = new THREE.Scene();
+
+				// Creamos el objeto render que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+    			renderer.setClearColor(0xccccff);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				renderer.antialias = false;
+ 
+				// Creamos la camara
+				camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
+			    camera.position.set(0, 0, 800);
+			    camera.lookAt(scene.position);
+
+			    // Creamos los controles Orbit
+                orbit = new THREE.OrbitControls(camera);
+                orbit.autoRotate = true;
+
+                // Variables uniformes: textura, apertura
+                uniformes = {
+                	time: { type: "f", value: 0.0 },
+                	textura: { type: "t", value: creaTextura("../texturas/general/", "bathroom.jpg" ) }
+                }
+
+	            // Plano
+	            var material = new THREE.ShaderMaterial({
+	            	uniforms: uniformes,
+	            	side: THREE.DoubleSide,
+			        vertexShader: document.getElementById('vertex-shader').textContent,
+			        fragmentShader: document.getElementById('fragment-shader').textContent
+			    });
+
+			    var geometria = new THREE.PlaneGeometry(500, 500, 10, 10);
+			    var plano = new THREE.Mesh(geometria, material);
+			    scene.add(plano);
+
+				// Incluimos la salida del render al elemento html
+				document.body.appendChild(renderer.domElement);
+
+				// Llamamos a la funcion de visualizacion 
+				render();
+
+			}
+
+			/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+			function render() {
+				// Adaptamos el reloj
+                var delta = miReloj.getDelta();
+                // Adaptamos los controles trackball
+                orbit.update(delta);
+
+                // render utilizando requestAnimationFrame
+                requestAnimationFrame(render);
+
+                uniformes.time.value += delta;
+                
+                renderer.render(scene, camera);
+			}
+
+			/** 
+			 * Creamos una textura
+			 * @param path: ruta donde se encuentra la imagen de textura
+			 * @param imagen: nombre de la imagen (textura) (con extension)
+			 **/
+			function creaTextura(path, imagen) {
+				var loader = new THREE.TextureLoader();
+				var textura = loader.load(path + imagen);
+				return textura;
+			}
+
+	     	/**
+	     	 * Funcion que controla el tamano y asegura que la camara y el render
+		 	 * se adaptan en el instante correcto
+	     	 **/
+	    	function handleResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+			    camera.updateProjectionMatrix();
+			    renderer.setSize(window.innerWidth, window.innerHeight);
+	    	}
+
+			// Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+
+    		// Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+    		window.addEventListener('resize', handleResize, false);
+
+		</script>
+	</body> 
+</html>

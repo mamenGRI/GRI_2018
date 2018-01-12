@@ -1,0 +1,149 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+		<meta charset=utf-8> 
+		<title> Specular Mapping Texture </title> 
+		<style> 
+			body { margin: 0; } 
+			canvas { width: 100%; height: 100% } 
+		</style> 
+	</head> 
+
+	<body> 
+		<script src="../libs/three.js"></script>
+		<script src="../libs/dat.gui.js"></script> 
+  		<script src="../libs/camara/OrbitControls.js"></script> 
+
+		<script>
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			var tierra;
+
+			var orbit;
+
+			var miReloj;
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+				// Reloj
+				miReloj = new THREE.Clock();
+
+				// Creamos la escena que contiene todos los objetos, camaras y luces
+				scene = new THREE.Scene();
+
+				// Creamos el objeto render que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+
+				// Inicializamos el color del fondo y el tamano
+				renderer.setClearColor(0x222222);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				renderer.shadowMap.enabled = true;
+				renderer.shadowMap.type = THREE.PCFSoftShadowMap; // por defecto THREE.PCFShadowMap
+
+				// Creamos la camara
+				camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+				// Posicionamos la camara en el centro de la escena
+		        camera.position.x = 15;
+		        camera.position.y = 15;
+		        camera.position.z = 15;
+		        camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+		        orbit = new THREE.OrbitControls(camera);
+		        orbit.autoRotate = false;
+
+		        // Creamos la tierra
+				tierra = creaTierra();
+       			scene.add(tierra);
+
+		        // Luz ambiental
+		        var ambiental = new THREE.AmbientLight(0x3300000);
+        		scene.add(ambiental);
+
+        		// Foco
+		        var foco = new THREE.DirectionalLight(0xffffff);
+		        foco.position.set(350, 350, 150);
+		        foco.intensity = 0.4;
+		        scene.add(foco);
+
+				// Incluimos la salida del render al elemento html
+				document.body.appendChild(renderer.domElement);
+
+				// Llamamos a la funcion de visualizacion 
+				render();
+			}
+
+			/** 
+			 * Creamos una textura
+			 * @param path: ruta donde se encuentra la imagen de textura
+			 * @param imagen: nombre de la imagen (textura) (sin extension)
+			 **/
+			function creaTextura(path, imagen) {
+				var loader = new THREE.TextureLoader();
+				var textura = loader.load(path + imagen + ".jpg");
+				return textura;
+			}
+
+			/** 
+			 * Creamos el objeto tierra con multitextura
+			 **/
+			function creaTierra() {
+				var geometria = new THREE.SphereGeometry(10, 40, 40)
+				// Mapa especular
+           		var texturaEspecular = creaTextura("../texturas/tierra/", "earthspec4k");
+           		// Mapa normal
+            	var texturaNormal = creaTextura("../texturas/tierra/", "earth_normalmap_flat4k");
+
+            	// Material
+	            var material = new THREE.MeshPhongMaterial();
+	            material.specularMap = texturaEspecular;
+	            material.specular = new THREE.Color(0xff0000);
+	            material.shininess = 2;
+	            material.normalMap = texturaNormal;
+
+	            // Multimaterial
+	            var tierra = THREE.SceneUtils.createMultiMaterialObject(geometria, [material]);
+
+	            return tierra;
+        	}
+
+			/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+			function render() {
+				var delta = miReloj.getDelta();
+            	orbit.update(delta);
+
+            	tierra.rotation.y += 0.005;
+
+				// render utilizando requestAnimationFrame
+				requestAnimationFrame(render);
+				renderer.render(scene, camera);
+			}
+
+	     	/**
+	     	 * Funcion que controla el tamano y asegura que la camara y el render
+		 	 * se adaptan en el instante correcto
+	     	 **/
+	    	function handleResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize(window.innerWidth, window.innerHeight);
+	    	}
+
+			// Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+
+    		// Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+    		window.addEventListener('resize', handleResize, false);
+		</script>
+	</body> 
+</html>

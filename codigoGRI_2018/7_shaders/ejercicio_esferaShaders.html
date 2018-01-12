@@ -1,0 +1,156 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+		<meta charset=utf-8> 
+		<title> Ejercicio Shaders: Esfera </title> 
+		<style> 
+			body { margin: 0; } 
+			canvas { width: 100%; height: 100% } 
+		</style> 
+	</head> 
+
+	<body>
+		<script src="../libs/three.min.js"></script> 
+		<script src="../libs/dat.gui.min.js"></script>
+		<script src="../libs/camara/OrbitControls.js"></script> 
+
+		<script type="x-shader/x-vertex" id="vertex-shader">
+			varying vec3 positionEye;
+			void main() {
+				positionEye = position;
+				gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+			}
+		</script>
+
+		<script type="x-shader/x-fragment" id="fragment-shader">
+			varying vec3 positionEye;
+			uniform float utime;
+
+			void main() {
+				vec3 color = vec3(0., 0., 0.);
+				float x = positionEye.x;
+				float y = positionEye.y;
+				// 
+				float rr = (x * x + y * y) / pow(.5, 2.);
+				if (rr < 1.0) {
+					// el pixel se encuentra dentro de la esfera
+					float z = sqrt(1. - rr);
+				    float t = .2 + .5 * max(0., x + y + z);
+				    float zSlice = 1. - 3.3 * x + .5 * sin(utime);
+				    if (zSlice < z) {
+				    	// si el pixel se encuentra en el slice
+				       	z = zSlice;
+					    t = z * z < 1. - rr ? .6 : 0.; 
+					}
+					color = vec3(t, t, t);
+         			color.r *= 1. + .2 * sin(30. * (x + .5 * z + .03 * sin(20. * y)));	
+      			}
+      			gl_FragColor = vec4(color, 1.);
+			}
+		</script>	
+
+
+		<script>
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			var controlCamara;
+
+			var miReloj;
+
+			var varUniform;
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+				// Creamos un reloj
+                miReloj = new THREE.Clock();
+
+				// Creamos la escena que contiene todos los objetos, camaras y luces
+				scene = new THREE.Scene();
+
+				// Creamos el objeto render que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+				renderer.antialias = false;
+				renderer.setSize(window.innerWidth, window.innerHeight);
+    			renderer.setClearColor(0xccccff);
+ 
+				// Creamos la camara
+				camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
+			    camera.position.set(0, 0, 5);
+			    camera.lookAt(scene.position);
+
+			    // Creamos los controles Orbit
+                controlCamara = new THREE.OrbitControls(camera);
+                controlCamara.autoRotate = true;
+
+
+				// variables uniformes
+                varUniform = {
+                	utime: {type: "f", value: 0 }
+                 }
+
+	            // material de la esfera
+	            var material1 = new THREE.ShaderMaterial({
+	            	uniforms: varUniform,
+			        vertexShader: document.getElementById('vertex-shader').textContent,
+			        fragmentShader: document.getElementById('fragment-shader').textContent
+			    });
+
+
+			    var geometria1 = new THREE.SphereGeometry(0.5, 32, 16);
+			    var esfera1 = new THREE.Mesh(geometria1, material1);
+			    scene.add(esfera1);
+
+
+				// Incluimos la salida del render al elemento html
+				document.body.appendChild(renderer.domElement);
+
+				// Llamamos a la funcion de visualizacion 
+				render();
+
+			}
+
+			/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+			function render() {
+				// Adaptamos el reloj
+                var delta = miReloj.getDelta();
+                // Adaptamos los controles trackball
+                //controlCamara.update(delta);
+ 
+                // render utilizando requestAnimationFrame
+                requestAnimationFrame(render);
+
+                varUniform.utime.value += delta;
+ 
+                renderer.render(scene, camera);
+			}
+
+	     	/**
+	     	 * Funcion que controla el tamano y asegura que la camara y el render
+		 	 * se adaptan en el instante correcto
+	     	 **/
+	    	function handleResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+			    camera.updateProjectionMatrix();
+			    renderer.setSize(window.innerWidth, window.innerHeight);
+	    	}
+
+			// Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+
+    		// Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+    		window.addEventListener('resize', handleResize, false);
+
+		</script>
+	</body> 
+</html>

@@ -1,0 +1,220 @@
+<!DOCTYPE html> 
+<html> 
+	<!-- https://github.com/ashima/webgl-noise/blob/master/src/noise2D.glsl -->
+	<head> 
+		<meta charset=utf-8> 
+		<title> Ruido de Perlin 2 </title> 
+		<style> 
+			body { margin: 0; } 
+			canvas { width: 100%; height: 100% } 
+		</style> 
+	</head> 
+
+	<body>
+		<script src="../libs/three.min.js"></script> 
+		<script src="../libs/dat.gui.min.js"></script>
+		<script src="../libs/camara/OrbitControls.js"></script>
+
+		<script type="x-shader/x-vertex" id="vertex-shader">
+			// Vertex shader
+			varying vec2 coordsUV;
+
+			void main () {
+				coordsUV = uv;
+				gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+			}
+		</script>
+
+		<script type="x-shader/x-fragment" id="fragment-shader">
+			// Fragment shader
+			varying vec2 coordsUV;
+
+			uniform int monocromo;
+			uniform float time;
+
+			// Ashima code 2D
+			// https://github.com/ashima/webgl-noise/blob/master/src/noise2D.glsl
+			vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+
+			vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+
+			vec3 permute(vec3 x) { return mod289(((x*34.0)+1.0)*x); }
+
+			float snoise(vec2 v) {
+			  	const vec4 C = vec4(0.211324865405187,  // (3.0-sqrt(3.0))/6.0
+			                      0.366025403784439,  // 0.5*(sqrt(3.0)-1.0)
+			                     -0.577350269189626,  // -1.0 + 2.0 * C.x
+			                      0.024390243902439); // 1.0 / 41.0
+				// First corner
+			  	vec2 i  = floor(v + dot(v, C.yy) );
+			  	vec2 x0 = v -   i + dot(i, C.xx);
+
+				// Other corners
+				vec2 i1;
+				//i1.x = step( x0.y, x0.x ); // x0.x > x0.y ? 1.0 : 0.0
+				//i1.y = 1.0 - i1.x;
+				i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+				// x0 = x0 - 0.0 + 0.0 * C.xx ;
+				// x1 = x0 - i1 + 1.0 * C.xx ;
+				// x2 = x0 - 1.0 + 2.0 * C.xx ;
+				vec4 x12 = x0.xyxy + C.xxzz;
+				x12.xy -= i1;
+
+				// Permutationes
+				i = mod289(i); // Evitamos los efectos de la truncacion en la permutacion
+				vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 )) + i.x + vec3(0.0, i1.x, 1.0 ));
+				vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+				m = m*m ;
+				m = m*m ;
+
+				// Gradientes: 41 puntos distribuidos uniformemente sobre una linea (sobre un diamante)
+				// Tamaño del anillo: 17*17 = 289 es casi un multiplo de 41 (41*7 = 287)
+				vec3 x = 2.0 * fract(p * C.www) - 1.0;
+				vec3 h = abs(x) - 0.5;
+				vec3 ox = floor(x + 0.5);
+				vec3 a0 = x - ox;
+
+				// Normalizamos los gradientes mediante el escalado m
+				// Aproximacion de: m *= inversesqrt( a0*a0 + h*h );
+				m *= 1.79284291400159 - 0.85373472095314 * ( a0*a0 + h*h );
+
+				// Calculamos el valor final del ruido en P
+				vec3 g;
+				g.x  = a0.x  * x0.x  + h.x  * x0.y;
+				g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+				return 130.0 * dot(m, g);
+			}
+
+			void main() {
+				vec3 f_color;
+
+				// Perturbamos las coordenadas de la textura con dos componentes de ruido
+		  		vec2 uv = coordsUV + 0.1*vec2(
+		  					snoise(coordsUV + vec2(0.0, time)),
+				    		snoise(coordsUV + vec2(0.0, time))
+				);
+				// snoise(v_texCoord3D + vec3(43.0, 17.0, time)))+
+				// snoise(v_texCoord3D + vec3(-17.0, -43.0, time)));
+				if (monocromo == 0) {
+						// Seis componentes del ruido en una suma fractal
+						float n = snoise(uv - vec2(0.0, time));
+						n += 0.5 * snoise(uv * 2.0 - vec2(0.0, time*1.4)); 
+						n += 0.25 * snoise(uv * 4.0 - vec2(0.0, time*2.0)); 
+						n += 0.125 * snoise(uv * 8.0 - vec2(0.0, time*2.8)); 
+						n += 0.0625 * snoise(uv * 16.0 - vec2(0.0, time*4.0)); 
+						n += 0.03125 * snoise(uv * 32.0 - vec2(0.0, time*5.6)); 
+						n = n * 0.7;
+					    // Mapa de color "hot"
+					    f_color = vec3(vec3(1.0, 0.5, 0.0) + vec3(n, n, n));
+				} else {
+				  		// A very plain monochrome noise
+					    float n = snoise(uv * 6.0);
+					    f_color = vec3(0.5 + 0.5 * vec3(n, n, n));
+				}
+				gl_FragColor = vec4(f_color, 1.0);
+			}
+		</script>	
+
+		<script>
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			var orbit;
+
+			var miReloj;
+
+			var uniformes;
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+
+				// Creamos un reloj
+                miReloj = new THREE.Clock();
+                miReloj.start();
+
+				// Creamos la escena que contiene todos los objetos, camaras y luces
+				scene = new THREE.Scene();
+
+				// Creamos el objeto render que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+				renderer.antialias = false;
+				renderer.setSize(window.innerWidth, window.innerHeight);
+    			renderer.setClearColor(0xccccff);
+ 
+				// Creamos la camara
+				camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
+			    camera.position.set(0, 0, 800);
+			    camera.lookAt(scene.position);
+
+			    // Creamos los controles Orbit
+                orbit = new THREE.OrbitControls(camera);
+                orbit.autoRotate = true;
+
+                // Variables uniformes: monocromo, time
+                uniformes = {
+                	monocromo: {type: "i", value: 0},
+               		time: { type: "f", value: 0.0 }
+                }
+
+	            // Plano
+	            var material = new THREE.ShaderMaterial({
+	            	uniforms: uniformes,
+	            	side: THREE.DoubleSide,
+			        vertexShader: document.getElementById('vertex-shader').textContent,
+			        fragmentShader: document.getElementById('fragment-shader').textContent
+			    });
+
+			    var geometria = new THREE.PlaneGeometry(500, 500, 10, 10);
+			    var plano = new THREE.Mesh(geometria, material);
+			    scene.add(plano);
+
+				// Incluimos la salida del render al elemento html
+				document.body.appendChild(renderer.domElement);
+
+				// Llamamos a la funcion de visualizacion 
+				render();
+			}
+
+			/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+			function render() {
+				// Adaptamos el reloj
+                var delta = miReloj.getDelta();
+                // Adaptamos los controles trackball
+                orbit.update(delta);
+ 
+                // render utilizando requestAnimationFrame
+                requestAnimationFrame(render);
+
+                uniformes.time.value += delta*0.1;
+
+                renderer.render(scene, camera);
+			}
+
+	     	/**
+	     	 * Funcion que controla el tamano y asegura que la camara y el render
+		 	 * se adaptan en el instante correcto
+	     	 **/
+	    	function handleResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+			    camera.updateProjectionMatrix();
+			    renderer.setSize(window.innerWidth, window.innerHeight);
+	    	}
+
+			// Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+
+    		// Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+    		window.addEventListener('resize', handleResize, false);
+		</script>
+	</body> 
+</html>

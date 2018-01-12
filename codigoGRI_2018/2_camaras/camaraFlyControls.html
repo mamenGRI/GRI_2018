@@ -1,0 +1,128 @@
+<!DOCTYPE html> 
+<html> 
+    <head> 
+        <meta charset=utf-8> 
+        <title> Fly Controls </title> 
+        <style> 
+            body { margin: 0; } 
+            canvas { width: 100%; height: 100% } 
+        </style> 
+    </head> 
+
+    <body> 
+        <div id="WebGL-output"> 
+        </div>
+
+        <div id="info"> 
+            <br/> 
+                <b>WASD</b> move, <b>R|F</b> up | down, <b>Q|E</b> roll, <b>up|down</b> pitch, <b>left|right</b> yaw
+            <br/>
+        </div>
+
+        <script src="../libs/three.min.js"></script>
+        <script src="../libs/camara/FlyControls.js"></script>
+ 
+        <script>
+            // variables globales
+            var renderer;
+            var scene;
+            var camera;
+
+            var miReloj;
+
+            var controlCamara;
+
+            /**
+             * Inicializacion Three.js
+             *
+             * Inicializa la escena, la camara y las luces
+             * Se llama cuando se carga la ventana mediante la funcion window.onload
+             **/
+            function init() {
+                miReloj = new THREE.Clock();
+
+                // Creamos la escena que contiene todos los objetos, camaras y luces
+                scene = new THREE.Scene();
+                scene.fog = new THREE.FogExp2( 0xcccccc, 0.002 );
+
+                // Creamos el objeto render que usaremos para visualizar la escena
+                renderer = new THREE.WebGLRenderer( { antialias: false } );
+                renderer.setClearColor( scene.fog.color );
+                renderer.setSize( window.innerWidth, window.innerHeight );
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap; // por defecto THREE.PCFShadowMap
+
+                // Camara
+                camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 1000 );
+
+                // Creamos los controles Fly
+                controlCamara = new THREE.FlyControls(camera);
+                controlCamara.movementSpeed = 100.0;
+                controlCamara.domElement = document.querySelector("#WebGL-output");
+                controlCamara.rollSpeed = 0.5;
+                controlCamara.autoForward = false;
+                controlCamara.dragToLook = true;
+
+                // Objetos
+                var geometria = new THREE.CylinderGeometry( 0, 10, 30, 4, 1 );
+                var material  = new THREE.MeshLambertMaterial( { color:0xffffff, flatShading: true } );
+
+                for ( var i = 0; i < 500; i ++ ) {
+                    var malla = new THREE.Mesh(geometria, material);
+                    malla.position.x = ( Math.random() - 0.5 ) * 1000;
+                    malla.position.y = ( Math.random() - 0.5 ) * 1000;
+                    malla.position.z = ( Math.random() - 0.5 ) * 1000;
+                    malla.updateMatrix();
+                    malla.matrixAutoUpdate = false;
+                    scene.add(malla);
+                }
+
+                // Luz ambiental
+                var ambiental = new THREE.AmbientLight( 0x222222 );
+                scene.add( ambiental );
+
+                // Luces direccionales
+                var luzDireccional1 = new THREE.DirectionalLight( 0xffffff );
+                luzDireccional1.position.set( 1, 1, 1 );
+                scene.add( luzDireccional1 );
+
+                var luzDireccional2 = new THREE.DirectionalLight( 0x002288 );
+                luzDireccional2.position.set( -1, -1, -1 );
+                scene.add( luzDireccional2 );
+
+                // Comienzo de la animacion
+                // Incluimos la salida del render al elemento html
+                document.body.appendChild(renderer.domElement);
+
+                // Comienzo de la animacion
+                render();
+            }
+
+            function render() {
+                var delta = miReloj.getDelta();
+
+                controlCamara.update( delta );
+
+                requestAnimationFrame( render );
+                renderer.render( scene, camera );
+            }
+
+            /**
+             * Funcion que controla el tamano y asegura que la camara y el render
+             * se adaptan en el instante correcto
+             **/
+            function handleResize() {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize( window.innerWidth, window.innerHeight );
+                controles.handleResize();
+            }
+
+            // Llama a la funcion init() cuando se carga la ventana 
+            window.onload = init;
+
+            // Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+            window.addEventListener('resize', handleResize, false);
+        </script>
+    </body> 
+</html>

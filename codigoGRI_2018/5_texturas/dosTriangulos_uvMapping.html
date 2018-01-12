@@ -1,0 +1,193 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+		<meta charset=utf-8> 
+		<title> Triangulos 2D con UV mapping </title> 
+		<style> 
+			body { margin: 0; } 
+			canvas { width: 100%; height: 100% } 
+		</style> 
+	</head> 
+
+	<body> 
+		<script src="../libs/three.js"></script> 
+
+		<script>
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+				// Creamos la escena que contiene todos los objetos, camaras y luces
+				scene = new THREE.Scene();
+
+				// Creamos el objeto render que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+
+				// Inicializamos el color del fondo y el tamano
+				renderer.setClearColor(0x888888);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				renderer.shadowMap.enabled = true;
+				renderer.shadowMap.type = THREE.PCFSoftShadowMap; // por defecto THREE.PCFShadowMap
+
+				// Creamos la camara
+				camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 1000);
+				// Posicionamos la camara en el centro de la escena
+				camera.position.y = 100;
+				camera.position.z = 500;
+
+				// Geometria del triangulo
+				var geometria = creaGeometria();
+
+				// Material con textura
+				var material = creaMaterial("../texturas/general/", "bathroom");
+
+				// Malla formada por dos triangulos
+				var grupo = new THREE.Mesh(geometria, material);
+
+				// Incluimos el grupo en la escena
+				scene.add(grupo);   
+
+				// Incluimos la salida del render al elemento html
+				document.body.appendChild(renderer.domElement);
+
+				// Llamamos a la funcion de visualizacion 
+				render();
+			}
+
+			/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+			function render() {
+				// render utilizando requestAnimationFrame
+				requestAnimationFrame(render);
+				renderer.render(scene, camera);
+			}
+
+			/** 
+			 * Creamos el material
+			 * @param path: ruta donde se encuentra la imagen de textura
+			 * @param imagen: nombre de la imagen (textura) (sin extension)
+			 **/
+			function creaMaterial(path, imagen) {
+				var loader = new THREE.TextureLoader();
+				var textura = loader.load(path + imagen + ".jpg");
+				var material = new THREE.MeshBasicMaterial({color: 0xff0000});
+				material.map = textura;
+
+				return material;
+			}
+
+			/**
+			 * Creamos un triangulo: sus vertices y el lado que forman el triangulo
+			 *
+			 *        v3 (-150,100,0)		v2(0,100,0)
+			 *			\-----------------------------
+			 *				\						/\
+			 *					\				/		\
+			 *						\		/				\
+			 *							\/-----------------------\
+			 *					v1 (-100,0,0)						v0(100,0,0)
+			 *						
+			 **/
+			function creaGeometria() {
+				var v0 = new THREE.Vector3(100,0,0);
+				var v1 = new THREE.Vector3(-100,0,0);
+				var v2 = new THREE.Vector3(0,100,0);
+				var v3 = new THREE.Vector3(-150,100,0);
+
+				// Creamos una geometria formada por cuatro vertices
+				var geometria = new THREE.Geometry();
+				geometria = addVertices (geometria, v0, v1, v2, v3);
+
+				// UV coordenadas
+				var uvCoords = [[0, 0], [0, 1], [1, 0], [1, 1]];
+
+				// CREAMOS EL PRIMER TRIANGULO (en direccion contraria a las agujas del reloj)
+				// cara formada por vertices 0, 2, 1
+				// coordenadas uv: 2, 3, 0 [(1,0), (1,1), (0,0)]
+				geometria = addTriangulo(geometria, 0, 2, 1, uvCoords, 2, 3, 0);
+
+				// CREAMOS EL SEGUNDO TRIANGULO (en direccion contraria a las agujas del reloj)
+				// cara formada por vertices 1, 2, 3
+				// coordenadas uv: 0, 3, 1 [(0,0), (1,1), (0,1)]
+				geometria = addTriangulo(geometria, 1, 2, 3, uvCoords, 0, 3, 1);
+
+				/* Otro UV mapping para el segundo triangulo
+				geometria.faceVertexUvs[0].push([
+  					new THREE.Vector2(0, 0),
+        			new THREE.Vector2(1, 0),
+        			new THREE.Vector2(1, 1)
+				]);
+				*/
+
+				geometria.computeFaceNormals();
+				geometria.computeVertexNormals();
+
+				console.log(geometria)
+
+				return geometria;
+			}
+
+			/**
+			 * Añadimos vertices a la geometria
+			 * @param geometria: geometria que estamos construyendo
+			 * @param v0, v1, v2: indices de los vertices que forman la geometria
+			 **/
+			function addVertices (geometria, v0, v1, v2, v3) {
+				// Anadimos los vertices que formaran los dos triangulos
+				geometria.vertices.push(v0);
+				geometria.vertices.push(v1);
+				geometria.vertices.push(v2);
+				geometria.vertices.push(v3);
+				return geometria;
+			}
+
+			/**
+			 * Añadimos un triangulo a la geometria
+			 * @param geometria: geometria que estamos construyendo
+			 * @param i0, i1, i2: indices de los vertices que forman el triangulo
+			 * @param uvCoords: coordenadas uv
+			 * @param uv0, uv1, uv2: indices de las coordenadas uv del UV mapping de la cara
+			 **/
+			function addTriangulo (geometria, i0, i1, i2, uvCoords, uv0, uv1, uv2) {
+				// CREAMOS TRIANGULO (en direccion contraria a las agujas del reloj)
+				var cara = new THREE.Face3(i0, i1, i2);
+				geometria.faces.push(cara);
+
+				// UV mapping de la cara
+				geometria.faceVertexUvs[0].push([
+					new THREE.Vector2(uvCoords[uv0][0], uvCoords[uv0][1]), 
+					new THREE.Vector2(uvCoords[uv1][0], uvCoords[uv1][1]), 
+					new THREE.Vector2(uvCoords[uv2][0], uvCoords[uv2][1])
+				]);
+
+				return geometria;
+			}
+
+	     	/**
+	     	 * Funcion que controla el tamano y asegura que la camara y el render
+		 	 * se adaptan en el instante correcto
+	     	 **/
+	    	function handleResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize(window.innerWidth, window.innerHeight);
+	    	}
+
+			// Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+
+    		// Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+    		window.addEventListener('resize', handleResize, false);
+		</script>
+	</body> 
+</html>

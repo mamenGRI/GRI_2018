@@ -1,0 +1,147 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+		<meta charset=utf-8> 
+		<title> Ejercicio: Camara rotacion alrededor del eje X </title> 
+		<style> 
+			body { margin: 0; } 
+			canvas { width: 100%; height: 100% } 
+		</style> 
+	</head> 
+
+	<body> 
+		<script src="../libs/three.js"></script>
+		<script src="../libs/dat.gui.js"></script>
+
+		<script>
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			var controles;
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+				// Creamos la escena que contiene todos los objetos, camaras y luces
+				scene = new THREE.Scene();
+
+				// Creamos el objeto render que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+				// Inicializamos el color del fondo y el tamano
+				renderer.setClearColor(0xEEEEEE);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				renderer.shadowMap.enabled = true;
+				renderer.shadowMap.type = THREE.PCFSoftShadowMap; // por defecto THREE.PCFShadowMap
+
+				// Creamos la camara con proyeccion perspectiva
+				camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+				// @TODO: Posicionamos la camara en el punto (0, 16, 13) y la enfocamos hacia el centro de la escena
+				// ...
+
+        		// Incluimos una luz ambiental
+        		var ambiental = new THREE.AmbientLight(0x090909);
+        		scene.add(ambiental);
+
+				// Incluimos una luz de tipo spot
+				var foco = new THREE.SpotLight();
+		        foco.position.set(10, 80, 30);
+		        foco.castShadow = true;
+		        scene.add(foco);
+
+		        // Creacion de la escena que consta de un plano (suelo) y un paralelepipedo
+        		creaSuelo();
+        		creaParalelepipedo();
+
+				// Creacion del objeto de control (GUI)
+				controles = new function () {
+		            this.rotSpeed = 0.005;
+            		this.scale = 1;
+	            };
+
+				// Incluimos el objeto control en la escena
+				addControlGui(controles);
+
+				// Incluimos la salida del render al elemento html
+				document.body.appendChild(renderer.domElement);
+
+		        // Llamamos a la funcion de visualizacion 
+				render();
+			}
+
+			/** 
+			 * Funcion que crea el menu en la parte superior derecha de la ventana
+			 * @param controlObject: objeto gui
+			 **/
+			function addControlGui(controles) {
+				var gui = new dat.GUI();
+        		gui.add(controles, 'rotSpeed', -0.1, 0.1);
+		    }
+
+			/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+			function render() {
+				renderer.render(scene, camera);
+
+				// @TODO: Calculamos la nueva posicion de la camara:
+				// 		y = y * cos(s) + z * sin(s)
+				// 		z = z * cos(s) - y * sin(s)
+				// donde s == controles.rotSpeed
+				// Hacemos que la camara mire al centro de la escena
+		        // ...
+
+		        requestAnimationFrame(render);
+			}
+
+			/** 
+			 * Funcion auxiliar que crea el suelo de la escena
+			 **/
+			function creaSuelo() {
+		        var geometria = new THREE.PlaneGeometry(100, 100, 20, 20);
+		        var material = new THREE.MeshPhongMaterial();
+		        var suelo = new THREE.Mesh(geometria, material);
+		        suelo.receiveShadow = true;
+		        suelo.rotation.x = -0.5 * Math.PI;
+		        scene.add(suelo);
+		    }
+
+		    /** 
+			 * Funcion auxiliar que crea un paralelepípedo y lo coloca en la escena
+			 **/
+		    function creaParalelepipedo() {
+		        var geometria = new THREE.BoxGeometry(2.5, 4.5, 10);
+		        var material = new THREE.MeshLambertMaterial({color: 0xff0000});
+		        // Paralelepipedo
+		        var cubo = new THREE.Mesh(geometria, material);
+		        cubo.castShadow = true;
+		        cubo.receiveShadow = true;
+		        cubo.position.z = -5;
+		        scene.add(cubo);
+		    }
+
+	     	/**
+	     	 * Funcion que controla el tamano y asegura que la camara y el render
+		 	 * se adaptan en el instante correcto
+	     	 **/
+	    	function handleResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize(window.innerWidth, window.innerHeight);
+	    	}
+
+			// Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+
+    		// Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+    		window.addEventListener('resize', handleResize, false);
+		</script>
+	</body> 
+</html>

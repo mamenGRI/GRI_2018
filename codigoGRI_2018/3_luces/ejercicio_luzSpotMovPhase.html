@@ -1,0 +1,200 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+		<meta charset=utf-8> 
+		<title> Luz spot en movimiento </title> 
+		<style> 
+			body { margin: 0; } 
+			canvas { width: 100%; height: 100% } 
+		</style> 
+	</head> 
+
+	<body> 
+		<script src="../libs/three.js"></script>
+		<script src="../libs/dat.gui.js"></script>
+
+		<script>
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			var colorAmbiental = "#1c1c1c";
+			var colorSpot = "#ffffff";
+
+			var luzAmbiental;
+			var foco;
+
+			var focoHelper;
+
+			var esferaLuz;
+
+			var invert = 1;
+        	var phase = 0;
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+				// Creamos la escena que contiene todos los objetos, camaras y luces
+				scene = new THREE.Scene();
+
+				// Creamos un Objeto Three.js (render) que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+				// Inicializamos el color del fondo y el tamano
+				renderer.setClearColor(0xEEEEEE);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				renderer.shadowMap.enabled = true;
+				renderer.shadowMap.type = THREE.PCFSoftShadowMap; // por defecto THREE.PCFShadowMap
+
+				// Camara
+		        camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.1, 1000 );
+		        camera.position.set(-25, 30, 25);
+		        camera.lookAt(new THREE.Vector3(10, 0, 0));
+
+				// PLANO
+		        var plano = new THREE.Mesh(new THREE.PlaneGeometry(60, 20, 1, 1), 
+		        							new THREE.MeshLambertMaterial({color: 0xffffff}));
+		        plano.rotation.x = -0.5 * Math.PI;
+		        plano.position.set(15, 0, 0);
+		        plano.receiveShadow  = true;
+      			scene.add(plano);
+
+		        // CUBO
+		        var cubo = new THREE.Mesh(new THREE.CubeGeometry(4, 4, 4), 
+		        							new THREE.MeshLambertMaterial({color: 0xff7777}));
+		        cubo.position.set(-4, 3, 0);
+		        cubo.castShadow = true;
+        		scene.add(cubo);
+
+        		// ESFERA
+		        var esfera = new THREE.Mesh(new THREE.SphereGeometry(4, 20, 20), 
+		        								new THREE.MeshLambertMaterial({color: 0x7777ff}));
+		        esfera.position.set (20, 0, 2);
+		        esfera.castShadow = true;
+		        scene.add(esfera);
+
+		        // @TODO: Creamos una luz ambiental de color "colorAmbiental" para dar un poco mas de luz a la escena
+		        // ...
+
+		     	// @TODO: Creamos tambien un foco con una luz tenue (0xcccccc) y poca intensidad (0.2) para que se vea mejor el efecto del movimiento de la luz
+		     	// Ese foco se situara en la posición (-40, 60, -10) y mira hacia el plano (lookAt)
+		     	
+		        // @TODO: Creamos una luz de tipo spot de color "colorSpot" situada en (-40, 60, -10) enfocada hacia el plano y que emite sombras
+			    // ...
+
+    			// @TODO: Creamos un dispositivo de ayuda del foco para ver como funciona el mismo (CameraHelper)
+				// ...
+
+		        // @TODO: Incluimos una esfera para simular el foco situada en el mismo lugar que el foco y que emite sombras
+		        // ...
+
+				// Incluimos la salida del render al elemento html
+				document.body.appendChild(renderer.domElement);
+
+				// Creacion del objeto de control (GUI)
+				var controles = new function() {
+					this.colorAmbiental = colorAmbiental;
+			        this.colorSpot = colorSpot;
+			        this.intensity = 1;
+			        this.distance = 0;
+			        this.exponent = 30;
+			        this.angle = 0.1;
+			        this.debug = false;
+			        this.castShadow = true;
+	       		};
+				// Incluimos el objeto control en la escena
+				addControlGui(controles);
+
+		        // Llamamos a la funcion de visualizacion 
+				render();
+
+			}
+
+			/** 
+			 * Funcion que crea el menu en la parte superior derecha de la ventana
+			 * @param controlObject: objeto gui
+			 **/
+			function addControlGui(controles) {
+				var gui = new dat.GUI();
+
+				gui.addColor(controles, 'colorAmbiental').onChange(
+						function (e) {
+            				luzAmbiental.color = new THREE.Color(e);
+        				}
+        		);
+       			gui.addColor(controles, 'colorSpot').onChange(
+       					function (e) {
+            				foco.color = new THREE.Color(e);
+						}
+				);
+				gui.add(controles, 'angle', 0, Math.PI * 2).onChange(
+						function (e) {
+			        		foco.angle = e;
+			    		}
+			    );
+			    gui.add(controles, 'intensity', 0, 5).onChange(
+			    		function (e) {
+			        		foco.intensity = e;
+			    		}
+			    );
+			    gui.add(controles, 'distance', 0, 200).onChange(
+			    		function (e) {
+			        		foco.distance = e;
+			    		}
+			    );
+			    gui.add(controles, 'exponent', 0, 100).onChange(
+			    		function (e) {
+			        		foco.exponent = e;
+			    		}
+			    );
+			    gui.add(controles, 'debug').onChange(
+				    	function (e) {
+				        	focoHelper.visible = e;
+				    	}
+			    );
+
+			    gui.add(controles, 'castShadow').onChange(
+				    	function (e) {
+				        	foco.castShadow = e;
+				    	}
+			    );
+        	}
+
+			/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+			function render() {
+				// @TODO: Mover el foco y la esfera de luz que simula dicho foco:
+				//		x = x + 14 * cos(phase)
+				// 		z = z +  7 * sin(phase)
+				// donde phase se actualiza con un paso de 0.03 y se invierte cuando el angulo pasa de 2*pi
+				// ...
+
+				// render utilizando requestAnimationFrame
+				requestAnimationFrame(render);
+				renderer.render(scene, camera);
+			}
+
+	     	/**
+	     	 * Funcion que controla el tamano y asegura que la camara y el render
+		 	 * se adaptan en el instante correcto
+	     	 **/
+	    	function handleResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize(window.innerWidth, window.innerHeight);
+	    	}
+
+			// Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+
+    		// Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
+    		window.addEventListener('resize', handleResize, false);
+		</script>
+	</body> 
+</html>

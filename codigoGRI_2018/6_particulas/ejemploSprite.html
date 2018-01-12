@@ -1,0 +1,181 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+		<meta charset=utf-8> 
+		<title> Ejemplo Sprite </title> 
+		<style> 
+			body { 
+				margin: 0;
+            	overflow: hidden;
+            	background-color: #000000; 
+            } 
+		</style> 
+	</head> 
+
+	<body>
+		<script src="../libs/three.js"></script>
+		<script src="../libs/dat.gui.js"></script>
+
+		<script>
+			// variables globales
+			var renderer;
+			var scene;
+			var camera;
+
+			var sceneOrtho;
+			var camereOrtho;
+
+			var controles;
+
+			var step = 0;
+
+			/**
+			 * Inicializacion Three.js
+		     *
+		     * Inicializa la escena, la camara y las luces
+			 * Se llama cuando se carga la ventana mediante la funcion window.onload
+		     **/
+			function init() {
+				// Creamos la escena que contiene todos los objetos, camaras y luces
+				scene = new THREE.Scene();
+
+				// Creamos el objeto render que usaremos para visualizar la escena
+				renderer = new THREE.WebGLRenderer();
+        		renderer.setClearColor(0x000000);
+        		renderer.setSize(window.innerWidth, window.innerHeight);
+
+				// Creamos la camara
+				camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 200);
+				// Posicionamos la camara en el centro de la escena
+		        camera.position.x = 0;
+		        camera.position.y = 0;
+		        camera.position.z = 50;
+
+		        sceneOrtho = new THREE.Scene();
+		        cameraOrtho = new THREE.OrthographicCamera( 0, window.innerWidth, window.innerHeight, 0, - 10, 10 );
+
+		        // Esfera
+		        var material = new THREE.MeshNormalMaterial();
+        		var geometria = new THREE.SphereGeometry(15, 20, 20);
+        		var esfera = new THREE.Mesh(geometria, material);
+        		scene.add(esfera);
+
+		        // Controles
+		        controles = new function () {
+		            this.size = 150;
+		            this.sprite = 0;
+		            this.transparent = true;
+		            this.opacity = 0.6;
+		            this.color = 0xffffff;
+		            this.rotateSystem = true;
+
+		            this.redraw = function () {
+		                sceneOrtho.children.forEach(
+		                	function (child) {
+		                    	if (child instanceof THREE.Sprite) 
+		                    		sceneOrtho.remove(child);
+		                	})
+		                	creaSprite(controles.size, controles.transparent, controles.opacity, controles.color, controles.sprite);
+		            };
+		        }
+
+		        addControlGui(controles);
+		        controles.redraw();
+
+				// Incluimos la salida del render al elemento html
+				document.body.appendChild(renderer.domElement);
+
+				// Llamamos a la funcion de visualizacion 
+				render();
+
+			}
+
+			/** 
+			 * Funcion que crea el menu en la parte superior derecha de la ventana
+			 * @param controlObject: objeto gui
+			 **/
+			function addControlGui(controles) {
+				var gui = new dat.GUI();
+
+				gui.add(controles, 'sprite', 0, 4).step(1).onChange(controles.redraw);
+        		gui.add(controles, 'size', 0, 120).onChange(controles.redraw);
+        		gui.add(controles, 'transparent').onChange(controles.redraw);
+        		gui.add(controles, 'opacity', 0, 1).onChange(controles.redraw);
+        		gui.addColor(controles, 'color').onChange(controles.redraw);
+			}
+
+			/** 
+			 * Creamos una textura
+			 * @param path: ruta donde se encuentra la imagen de textura
+			 * @param imagen: nombre de la imagen (textura) (con extension)
+			 **/
+			function creaTextura(path, imagen) {
+				var loader = new THREE.TextureLoader();
+				var textura = loader.load(path + imagen);
+				return textura;
+			}
+
+			/** 
+			 * Creacion Sprite
+			 **/
+			function creaSprite(size, transparent, opacity, color, spriteNumber) {
+				var textura = creaTextura("../texturas/particulas/", "sprite-sheet.png");
+
+	            var material = new THREE.SpriteMaterial({
+	                        opacity: opacity,
+	                        color: color,
+	                        transparent: transparent,
+	                        map: textura
+	            });
+
+	            // Una fila con 5 sprites
+	            material.map.offset = new THREE.Vector2(0.2 * spriteNumber, 0);
+	            material.map.repeat = new THREE.Vector2(1 / 5, 1);
+	            material.depthTest = false;
+
+	            material.blending = THREE.AdditiveBlending;
+
+	            var sprite = new THREE.Sprite(material);
+	            sprite.scale.set(size, size, size);
+	            sprite.position.set(100, 50, -10);
+	            sprite.velocityX = 5;
+
+	            sceneOrtho.add(sprite);
+	        }
+
+			/**
+			 * Funcion para visualizar la escena
+			 * El intervalo viene dado por requestAnimationFrame
+			 **/
+			function render() {
+				step += 0.01;
+				camera.position.y = Math.sin(step) * 20;
+
+            	sceneOrtho.children.forEach(
+            		function (e) {
+		                if (e instanceof THREE.Sprite) {
+		                    // Movemos el sprite en la zona inferior
+		                    e.position.x = e.position.x + e.velocityX;
+		                    if (e.position.x > window.innerWidth) {
+		                        e.velocityX = -5;
+		                        console.log(controles.sprite++);
+		                        e.material.map.offset.set(1 / 5 * (controles.sprite % 4), 0);
+		                    }
+		                    if (e.position.x < 0) {
+		                        e.velocityX = 5;
+		                    }
+		                }
+            		}
+            	);
+
+            	requestAnimationFrame(render);
+	            renderer.autoClear = false;
+	            renderer.render(scene, camera);
+	            renderer.render(sceneOrtho, cameraOrtho);
+			}
+
+			// Llama a la funcion init() cuando se carga la ventana 
+    		window.onload = init;
+		</script>
+	</body> 
+</html>
