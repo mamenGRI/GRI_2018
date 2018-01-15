@@ -10,8 +10,8 @@
 	</head> 
 
 	<body> 
-		<script src="../libs/three.min.js"></script> 
-		<script src="../libs/dat.gui.min.js"></script> 
+		<script src="../libs/three.js"></script> 
+		<script src="../libs/dat.gui.js"></script> 
 
 		<script>
 			// variables globales
@@ -60,14 +60,14 @@
 
 		        // Creamos un array de colores, uno diferente para cada cara
 		        var materiales = [];
-		        materiales.push(new THREE.MeshBasicMaterial({ color: 0x009e60  }));
-		        materiales.push(new THREE.MeshBasicMaterial({ color: 0x0051ba  }));
-		        materiales.push(new THREE.MeshBasicMaterial({ color: 0xffd500  }));
-		        materiales.push(new THREE.MeshBasicMaterial({ color: 0xff5800  }));
-		        materiales.push(new THREE.MeshBasicMaterial({ color: 0xC41E3A }));
-		        materiales.push(new THREE.MeshBasicMaterial({ color: 0xffffff  }));
-		        
-		         // Grupo: Cubo de Rubik
+		        materiales.push(new THREE.MeshBasicMaterial({color: 0x009e60}));
+		        materiales.push(new THREE.MeshBasicMaterial({color: 0x0051ba}));
+		        materiales.push(new THREE.MeshBasicMaterial({color: 0xffd500}));
+		        materiales.push(new THREE.MeshBasicMaterial({color: 0xff5800}));
+		        materiales.push(new THREE.MeshBasicMaterial({color: 0xC41E3A}));
+		        materiales.push(new THREE.MeshBasicMaterial({color: 0xffffff}));
+
+				// Grupo: Cubo de Rubik
 		        grupo = new THREE.Mesh();
 		        // Creamos cubos en el cual los colores de las caras 
 				// vienen dados por el array de colores anteriormente definido
@@ -76,7 +76,7 @@
 		                for (var z = 0; z < 3; z++) {
 		                    var geometria = new THREE.CubeGeometry(2.9, 2.9, 2.9);
 		                    var cubo = new THREE.Mesh(geometria, materiales);
-		                    cubo.position = new THREE.Vector3(x * 3 - 3, y * 3, z * 3 - 3);
+		                    cubo.position.set(x * 3 - 3, y * 3, z * 3 - 3);
 		                    grupo.add(cubo);
 		                }
 		            }
@@ -92,7 +92,6 @@
 		        // Menu
 		       	controles = new function () {
 		            this.rotationSpeed = 0.01;
-		            this.numberOfObjects = scene.children.length;
 		        }
 
 		        addControlGui(controles);
