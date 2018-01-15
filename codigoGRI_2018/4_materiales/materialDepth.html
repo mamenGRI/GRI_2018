@@ -94,7 +94,6 @@
 
 				// Llamamos a la funcion de visualizacion 
 				render();
-
 			}
 
 			/** 
@@ -110,11 +109,13 @@
 		        gui.add(controles, 'cameraNear', 0, 50).onChange(
 		        	function (e) {
 		            	camera.near = e;
+		            	camera.updateProjectionMatrix();
 		        	}
 		        );
 		        gui.add(controles, 'cameraFar', 50, 200).onChange(
 		        	function (e) {
 		            	camera.far = e;
+		            	camera.updateProjectionMatrix();
 		        	}
 		        );
 			}
@@ -153,7 +154,6 @@
 
     		// Llama a la funcion handleResize() cuando se cambia el tamano de la ventana
     		window.addEventListener('resize', handleResize, false);
-
 		</script>
 	</body> 
 </html>
